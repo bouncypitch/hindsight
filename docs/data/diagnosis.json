@@ -1,0 +1,35 @@
+{
+ "failed": true,
+ "t_sec": 8.75,
+ "failure_type": "rollover",
+ "cause": "The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.",
+ "evidence": [
+  "00:00.000-00:06.000 (video): Robot sits stationary on a flat indoor hardwood floor facing a gap between a staircase railing on the left and kitchen island barstools on the right (a slight camera nudge occurs at 00:03.250 as a cat jumps onto the stool, corresponding to t=1.5 s in the IMU log).",
+  "00:06.125 (video) / t=4.28 s (IMU): Robot begins driving straight forward toward the gap at ~0.6-0.7 m/s (showing a ~1.8 s clock offset between video and IMU timestamps).",
+  "00:08.125-00:08.500 (video) / t=6.56-6.86 s (IMU): The front-right wheel contacts the wooden barstool leg/rung (~0.15 m to the right of centerline), pitching and rolling the chassis.",
+  "00:08.625-00:09.250 (video) / t=6.96-7.56 s (IMU): The robot tips past recovery to its left; IMU records sharp impact spikes (az_g = -1.639 g at t=7.06 s and -1.948 g at t=7.46 s) as it slams onto its left side.",
+  "00:09.375-00:11.875 (video) / t=7.76-11.94 s (IMU): Robot rests completely on its left side facing the ceiling, confirmed by IMU steady-state gravity on the lateral axis (ay_g ≈ +1.02 g, az_g ≈ -0.02 g)."
+ ],
+ "scene": {
+  "scenario_kind": "obstacle",
+  "obstacle_distance_m": 1.4,
+  "obstacle_lateral_m": -0.15,
+  "obstacle_radius_m": 0.03,
+  "mover_speed_mps": 0.0,
+  "curb_height_m": 0.0,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "speed_mps": 0.65,
+  "t_edge_sec": null,
+  "surface": "dry indoor hardwood floor",
+  "other_factors": [
+   "Wooden barstool with a low horizontal footrest rung between the legs that the right wheel climbed",
+   "Approximately 1.75-1.80 s synchronization offset between the video clock and the IMU log (IMU timestamps lead video timestamps)"
+  ]
+ },
+ "confidence": 0.9,
+ "unknowns": [
+  "Exact synchronization offset (~1.75-1.80 s) between the video timestamps and IMU log timestamps; both sensors agree on the physical sequence of events (nudge, drive start, collision, and 90-degree left rollover), so both are trusted for dynamics while noting the clock skew.",
+  "Exact forward speed and initial distance to the stool leg (estimated from visual floor plank scale and travel time without wheel odometry)."
+ ]
+}

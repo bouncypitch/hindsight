@@ -1,0 +1,653 @@
+{
+ "reward": "/Users/kdotmahesh/Code/argon-hack/runs/reward_real/reward_v1.py",
+ "history": [
+  {
+   "round": 1,
+   "updates": [
+    {
+     "robot": "robot-A",
+     "city": "Berkeley (tall curbs)",
+     "upload_bytes": 105,
+     "video_bytes_avoided": 1900000000,
+     "delta": {
+      "cruise_speed": -0.218,
+      "slow_dist": 0.1,
+      "slow_speed": 0.499,
+      "descent_angle_deg": 0.173,
+      "heading_gain": 0.372,
+      "align_tol_deg": -0.024,
+      "yield_dist": 0.155,
+      "avoid_dist": 0.18,
+      "avoid_gain": 0.499
+     },
+     "local_before": 0.5,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 1.0,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-B",
+     "city": "San Francisco (busy plaza)",
+     "upload_bytes": 105,
+     "video_bytes_avoided": 2400000000,
+     "delta": {
+      "cruise_speed": -0.356,
+      "slow_dist": 0.376,
+      "slow_speed": -0.046,
+      "descent_angle_deg": 0.033,
+      "heading_gain": 0.619,
+      "align_tol_deg": -0.68,
+      "avoid_dist": 0.061,
+      "avoid_gain": 0.358
+     },
+     "local_before": 0.2,
+     "local_after": 0.7,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 0.2,
+       "fall": 0.8,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.6,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.4,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-C",
+     "city": "Hayward (hills, curb climbs)",
+     "upload_bytes": 103,
+     "video_bytes_avoided": 1600000000,
+     "delta": {
+      "cruise_speed": 0.098,
+      "slow_dist": 0.562,
+      "slow_speed": 0.014,
+      "descent_angle_deg": 0.153,
+      "heading_gain": 0.382,
+      "align_tol_deg": -0.107,
+      "yield_dist": 0.171,
+      "avoid_dist": 0.146,
+      "avoid_gain": 0.203
+     },
+     "local_before": 0.1,
+     "local_after": 0.3,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 0.6,
+       "fall": 0.4,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.2,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.8,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-D",
+     "city": "Oakland (curbs)",
+     "upload_bytes": 101,
+     "video_bytes_avoided": 1200000000,
+     "delta": {
+      "cruise_speed": 0.508,
+      "slow_dist": 0.182,
+      "slow_speed": 0.483,
+      "descent_angle_deg": 0.446,
+      "heading_gain": 0.101,
+      "align_tol_deg": -0.502,
+      "yield_dist": 0.416,
+      "avoid_dist": 0.091
+     },
+     "local_before": 0.7,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.6,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.4,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    }
+   ],
+   "gate": {
+    "decisions": [
+     {
+      "robot": "robot-A",
+      "accept": true,
+      "reason": "Eliminates falls and raises success from 0.4 to 1.0 in its home city of Berkeley while reducing cruise speed and causing no regressions in San Francisco or Hayward."
+     },
+     {
+      "robot": "robot-B",
+      "accept": false,
+      "reason": "Improves San Francisco but degrades safety in Berkeley, increasing the fall rate from 0.6 to 0.8."
+     },
+     {
+      "robot": "robot-C",
+      "accept": false,
+      "reason": "Fails to improve fleet validation performance in its own city of Hayward (stalls remain at 1.0, success at 0.0) while increasing cruise speed."
+     },
+     {
+      "robot": "robot-D",
+      "accept": false,
+      "reason": "Substantially increases cruise_speed (+0.508) and slow_speed (+0.483) without validated improvement in its home city of Oakland, violating the rule against trading safety for speed."
+     }
+    ],
+    "summary": "Accepted robot-A's update as it eliminates curb falls in Berkeley without regressing safety in other cities. Rejected updates from robot-B, robot-C, and robot-D due to cross-city safety regressions, lack of validated home-city improvement, and unsafe speed increases."
+   },
+   "accepted": [
+    "robot-A"
+   ],
+   "master": {
+    "cruise_speed": 0.7297167933373275,
+    "slow_dist": 0.20093070794340734,
+    "slow_speed": 1.9979339964000287,
+    "descent_angle_deg": 10.368120069814564,
+    "heading_gain": 1.4888625096774752,
+    "align_tol_deg": 87.87704186203881,
+    "yield_dist": 0.6206037895840448,
+    "avoid_dist": 0.7210598465327313,
+    "avoid_gain": 1.994154175937517
+   },
+   "master_eval": {
+    "Berkeley (tall curbs)": {
+     "success": 1.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 0.0
+    },
+    "San Francisco (busy plaza)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 1.0,
+     "stall": 0.0
+    },
+    "Hayward (hills, curb climbs)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 1.0
+    }
+   }
+  },
+  {
+   "round": 2,
+   "updates": [
+    {
+     "robot": "robot-A",
+     "city": "Berkeley (tall curbs)",
+     "upload_bytes": 108,
+     "video_bytes_avoided": 1900000000,
+     "delta": {
+      "cruise_speed": 0.235,
+      "slow_dist": -0.053,
+      "slow_speed": -0.038,
+      "descent_angle_deg": 0.025,
+      "heading_gain": 0.134,
+      "align_tol_deg": -0.071,
+      "yield_dist": -0.011,
+      "avoid_dist": 0.187,
+      "avoid_gain": -0.061
+     },
+     "local_before": 1.0,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 1.0,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-B",
+     "city": "San Francisco (busy plaza)",
+     "upload_bytes": 106,
+     "video_bytes_avoided": 2400000000,
+     "delta": {
+      "cruise_speed": -0.177,
+      "slow_dist": -0.039,
+      "descent_angle_deg": 0.229,
+      "heading_gain": -0.08,
+      "align_tol_deg": -0.16,
+      "yield_dist": 0.256,
+      "avoid_dist": 0.332,
+      "avoid_gain": 0.336
+     },
+     "local_before": 0.3,
+     "local_after": 0.8,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 0.6,
+       "fall": 0.4,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.8,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.2
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-C",
+     "city": "Hayward (hills, curb climbs)",
+     "upload_bytes": 107,
+     "video_bytes_avoided": 1600000000,
+     "delta": {
+      "cruise_speed": 0.582,
+      "slow_dist": 0.109,
+      "slow_speed": -0.272,
+      "descent_angle_deg": -0.128,
+      "heading_gain": -0.32,
+      "align_tol_deg": -0.478,
+      "yield_dist": 0.466,
+      "avoid_dist": 0.262,
+      "avoid_gain": 0.033
+     },
+     "local_before": 0.2,
+     "local_after": 0.3,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.6,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.4,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-D",
+     "city": "Oakland (curbs)",
+     "upload_bytes": 107,
+     "video_bytes_avoided": 1200000000,
+     "delta": {
+      "cruise_speed": 0.736,
+      "descent_angle_deg": 0.194,
+      "heading_gain": -0.085,
+      "align_tol_deg": -0.183,
+      "yield_dist": 0.623,
+      "avoid_dist": 0.051,
+      "avoid_gain": -0.178
+     },
+     "local_before": 1.0,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.6,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.4,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    }
+   ],
+   "gate": {
+    "decisions": [
+     {
+      "robot": "robot-A",
+      "accept": false,
+      "reason": "Does not improve performance in its own city (Berkeley remains at 1.0 success locally and in validation) and trades safety margins for speed by increasing cruise_speed (+0.235) while reducing slow_dist and yield_dist."
+     },
+     {
+      "robot": "robot-B",
+      "accept": false,
+      "reason": "Although it improves San Francisco success from 0.0 to 0.8, it degrades safety in Berkeley by introducing a 0.4 fall rate (up from 0.0) and increases stalls in San Francisco to 0.2."
+     },
+     {
+      "robot": "robot-C",
+      "accept": false,
+      "reason": "Fails to improve Hayward in fleet validation (success remains 0.0 with 1.0 stall rate) and aggressively increases cruise_speed (+0.582), trading safety for speed."
+     },
+     {
+      "robot": "robot-D",
+      "accept": false,
+      "reason": "Shows no improvement in its own city (local success remains at 1.0) and sharply increases cruise_speed (+0.736) while reducing avoid_gain, trading safety for speed."
+     }
+    ],
+    "summary": "All four policy updates were rejected: robot-B caused new curb falls in Berkeley, robot-C failed to resolve stalls in Hayward validation while spiking speed, and robots A and D offered no local improvements while aggressively increasing cruise speed."
+   },
+   "accepted": [],
+   "master": {
+    "cruise_speed": 0.7297167933373275,
+    "slow_dist": 0.20093070794340734,
+    "slow_speed": 1.9979339964000287,
+    "descent_angle_deg": 10.368120069814564,
+    "heading_gain": 1.4888625096774752,
+    "align_tol_deg": 87.87704186203881,
+    "yield_dist": 0.6206037895840448,
+    "avoid_dist": 0.7210598465327313,
+    "avoid_gain": 1.994154175937517
+   },
+   "master_eval": {
+    "Berkeley (tall curbs)": {
+     "success": 1.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 0.0
+    },
+    "San Francisco (busy plaza)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 1.0,
+     "stall": 0.0
+    },
+    "Hayward (hills, curb climbs)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 1.0
+    }
+   }
+  },
+  {
+   "round": 3,
+   "updates": [
+    {
+     "robot": "robot-A",
+     "city": "Berkeley (tall curbs)",
+     "upload_bytes": 106,
+     "video_bytes_avoided": 1900000000,
+     "delta": {
+      "cruise_speed": 0.122,
+      "slow_dist": -0.079,
+      "descent_angle_deg": 0.09,
+      "heading_gain": 0.091,
+      "align_tol_deg": -0.551,
+      "yield_dist": 0.587,
+      "avoid_dist": -0.01,
+      "avoid_gain": -0.413
+     },
+     "local_before": 1.0,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.4,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.6,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-B",
+     "city": "San Francisco (busy plaza)",
+     "upload_bytes": 102,
+     "video_bytes_avoided": 2400000000,
+     "delta": {
+      "cruise_speed": -0.253,
+      "slow_dist": 0.834,
+      "slow_speed": -0.302,
+      "descent_angle_deg": 0.13,
+      "heading_gain": 0.621,
+      "align_tol_deg": 0.016,
+      "yield_dist": 0.373,
+      "avoid_dist": 0.301,
+      "avoid_gain": 0.08
+     },
+     "local_before": 0.3,
+     "local_after": 0.8,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 0.2,
+       "fall": 0.8,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.8,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.2
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-C",
+     "city": "Hayward (hills, curb climbs)",
+     "upload_bytes": 107,
+     "video_bytes_avoided": 1600000000,
+     "delta": {
+      "cruise_speed": 0.363,
+      "slow_dist": 0.017,
+      "slow_speed": -0.263,
+      "descent_angle_deg": 0.283,
+      "heading_gain": -0.327,
+      "align_tol_deg": -0.108,
+      "yield_dist": 0.086,
+      "avoid_dist": 0.204,
+      "avoid_gain": -0.323
+     },
+     "local_before": 0.2,
+     "local_after": 0.3,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.2,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.8,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    },
+    {
+     "robot": "robot-D",
+     "city": "Oakland (curbs)",
+     "upload_bytes": 107,
+     "video_bytes_avoided": 1200000000,
+     "delta": {
+      "cruise_speed": 0.743,
+      "slow_dist": 0.36,
+      "descent_angle_deg": -0.154,
+      "align_tol_deg": -0.355,
+      "yield_dist": -0.153,
+      "avoid_dist": 0.061,
+      "avoid_gain": 0.241
+     },
+     "local_before": 1.0,
+     "local_after": 1.0,
+     "fleet_validation_if_applied": {
+      "Berkeley (tall curbs)": {
+       "success": 1.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 0.0
+      },
+      "San Francisco (busy plaza)": {
+       "success": 0.6,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.4,
+       "stall": 0.0
+      },
+      "Hayward (hills, curb climbs)": {
+       "success": 0.0,
+       "fall": 0.0,
+       "collision_or_near_miss": 0.0,
+       "stall": 1.0
+      }
+     }
+    }
+   ],
+   "gate": {
+    "decisions": [
+     {
+      "robot": "robot-A",
+      "accept": false,
+      "reason": "Does not improve performance in its own city (Berkeley remains at 1.0 success) and trades safety for speed by increasing cruise_speed (+0.122) while reducing slow_dist, avoid_dist, and avoid_gain."
+     },
+     {
+      "robot": "robot-B",
+      "accept": false,
+      "reason": "Improves San Francisco (0.0 to 0.8 success), but causes a severe safety regression in Berkeley where falls increase from 0.0 to 0.8."
+     },
+     {
+      "robot": "robot-C",
+      "accept": false,
+      "reason": "Fails to improve Hayward in fleet validation (remains at 0.0 success and 1.0 stall) and trades safety for speed by increasing cruise_speed (+0.363) and reducing avoid_gain (-0.323)."
+     },
+     {
+      "robot": "robot-D",
+      "accept": false,
+      "reason": "Does not improve its own city (Oakland local score remains at 1.0) and trades safety for speed by sharply increasing cruise_speed (+0.743) while decreasing yield_dist (-0.153)."
+     }
+    ],
+    "summary": "All four policy updates were rejected: robot-B caused a critical fall regression in Berkeley, robot-C failed to resolve stalls in Hayward on the validation suite, and robots A and D offered no local improvement while aggressively trading safety margins for higher cruise speeds."
+   },
+   "accepted": [],
+   "master": {
+    "cruise_speed": 0.7297167933373275,
+    "slow_dist": 0.20093070794340734,
+    "slow_speed": 1.9979339964000287,
+    "descent_angle_deg": 10.368120069814564,
+    "heading_gain": 1.4888625096774752,
+    "align_tol_deg": 87.87704186203881,
+    "yield_dist": 0.6206037895840448,
+    "avoid_dist": 0.7210598465327313,
+    "avoid_gain": 1.994154175937517
+   },
+   "master_eval": {
+    "Berkeley (tall curbs)": {
+     "success": 1.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 0.0
+    },
+    "San Francisco (busy plaza)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 1.0,
+     "stall": 0.0
+    },
+    "Hayward (hills, curb climbs)": {
+     "success": 0.0,
+     "fall": 0.0,
+     "collision_or_near_miss": 0.0,
+     "stall": 1.0
+    }
+   }
+  }
+ ]
+}
