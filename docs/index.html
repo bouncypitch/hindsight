@@ -30,7 +30,8 @@
   .line { color: var(--mute); font-size: clamp(19px, 2.4vw, 26px); font-weight: 500; letter-spacing: -.01em; margin: 0 auto 40px; max-width: 760px; text-wrap: balance; }
   .num { font-size: clamp(64px, 12vw, 140px); font-weight: 800; letter-spacing: -.05em; line-height: 1.1; padding-bottom: .08em; margin: 8px 0 36px; }
   .row { display: grid; gap: 14px; }
-  .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: repeat(3, 1fr); }
+  .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: repeat(3, 1fr); } .r4 { grid-template-columns: repeat(4, 1fr); }
+  .r4 video { aspect-ratio: 16 / 10; object-fit: cover; }
   .r3 video { aspect-ratio: 4 / 3; object-fit: cover; }
   .r2 video { aspect-ratio: 16 / 10; object-fit: cover; }
   .cell { position: relative; min-width: 0; }
@@ -47,7 +48,7 @@
   footer { text-align: center; color: var(--mute); font-size: 15px; padding-block: 56px 80px; border-top: 1px solid var(--line); }
   footer a { color: var(--g2); text-decoration: none; }
   footer p { margin: 6px auto; max-width: 760px; }
-  @media (max-width: 640px) { .r2, .r3 { grid-template-columns: 1fr; } section { padding-block: 64px; } }
+  @media (max-width: 640px) { .r4 { grid-template-columns: 1fr 1fr; } .r2, .r3 { grid-template-columns: 1fr; } section { padding-block: 64px; } }
 </style>
 </head>
 <body>
@@ -92,14 +93,19 @@
 <section>
   <h2>Argon writes the reward for RL.</h2>
   <p class="line">By watching good rides and bad ones.</p>
-  <div class="row r2">
-    <div class="cell"><video src="media/good_ride.mp4" autoplay muted loop playsinline></video><span class="chip good">Good</span></div>
-    <div class="cell"><video src="media/barstool_real.mp4" autoplay muted loop playsinline></video><span class="chip bad">Bad</span></div>
-  </div>
+  <p class="line" style="margin-bottom:12px"><b style="color:var(--g1)">Good</b></p>
+  <div class="row r4"><div class="cell"><video src="media/good_1.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/good_2.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/good_3.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/good_4.mp4" autoplay muted loop playsinline></video></div></div>
+  <p class="line" style="margin:12px auto 0">Rewards steady progress, wide clearance, smooth steering</p>
+  <p class="line" style="margin:36px auto 12px"><b style="color:var(--bad1)">Bad</b></p>
+  <div class="row r4"><div class="cell"><video src="media/bad_1.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/bad_2.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/bad_3.mp4" autoplay muted loop playsinline></video></div><div class="cell"><video src="media/bad_4.mp4" autoplay muted loop playsinline></video></div></div>
+  <p class="line" style="margin:12px auto 0">Penalizes falls, collisions, freezing and ramming</p>
 </section>
 
 <section>
   <h2>Reinforcement learning trains a better policy.</h2>
+  <p class="line">It trains on all 40 twin variants of the failure.</p>
+  <video src="media/rl_40_variants.mp4" autoplay muted loop playsinline></video>
+  <p class="line" style="margin:18px auto 56px"><b style="color:var(--bad1)">Before:</b> the robot hits the obstacle in all 40. <b style="color:var(--g1)">After:</b> it steers around it in all 40.</p>
   <p class="line">When it games the reward, Argon catches it, rewrites the reward and trains again. On its own.</p>
   <div class="num hot">Blocked</div>
   <video src="media/hack_freeze.mp4" autoplay muted loop playsinline></video>
