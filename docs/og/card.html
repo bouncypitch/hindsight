@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+  * { box-sizing:border-box; margin:0; }
+  body { width:1200px; height:630px; background:#000; color:#f5f5f7; font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden; }
+  .wrap { display:grid; grid-template-columns:520px 1fr; height:100%; }
+  .left { padding:56px 48px 48px 56px; display:flex; flex-direction:column; }
+  .eyebrow { color:#a1a1a6; font-size:20px; font-weight:500; }
+  h1 { font-size:66px; line-height:1.04; letter-spacing:-.045em; font-weight:800; margin-top:14px; padding-bottom:.08em;
+       background:linear-gradient(100deg,#2ee6d6,#3b82f6 55%,#a78bfa); -webkit-background-clip:text; color:transparent; }
+  .tag { font-size:26px; font-weight:600; letter-spacing:-.02em; margin-top:16px; line-height:1.25; }
+  .stats { margin-top:auto; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .stat .v { font-size:34px; font-weight:800; letter-spacing:-.03em; background:linear-gradient(100deg,#2ee6d6,#3b82f6); -webkit-background-clip:text; color:transparent; padding-bottom:.06em; }
+  .stat .k { color:#a1a1a6; font-size:15px; line-height:1.25; }
+  .right { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:10px; padding:28px 28px 28px 0; }
+  .tile { position:relative; border-radius:18px; overflow:hidden; background:#111; }
+  .tile img { width:100%; height:100%; object-fit:cover; display:block; }
+  .tile span { position:absolute; left:12px; bottom:12px; font-size:16px; font-weight:700; padding:5px 12px; border-radius:999px; background:rgba(0,0,0,.65); }
+  .c { color:#2ee6d6; } .r { color:#ff6b6b; }
+</style></head><body><div class="wrap">
+  <div class="left">
+    <div class="eyebrow">Hindsight · built with Gemini 4 Argon</div>
+    <h1>Federated Robot Learning</h1>
+    <div class="tag">Every robot failure makes the fleet smarter.</div>
+    <div class="stats">
+      <div class="stat"><div class="v">50 h</div><div class="k">real robot video scanned</div></div>
+      <div class="stat"><div class="v">100%</div><div class="k">accuracy, confirmed by a human</div></div>
+      <div class="stat"><div class="v" style="font-size:30px;white-space:nowrap">0→100%</div><div class="k">success after Argon's fix</div></div>
+    </div>
+  </div>
+  <div class="right">
+    <div class="tile"><img src="wall.jpg"><span>Finds failures</span></div>
+    <div class="tile"><img src="twin.jpg"><span class="c">Photoreal twin</span></div>
+    <div class="tile"><img src="whatif.jpg"><span class="r">What if?</span></div>
+    <div class="tile"><img src="fixed.jpg"><span class="c">Fixed, approved</span></div>
+  </div>
+</div></body></html>
