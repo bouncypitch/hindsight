@@ -3,156 +3,130 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Federated Robot Learning: Enabled by Argon</title>
-<meta name="description" content="Hindsight: robots that learn from their own failures, with Gemini 4 Argon.">
+<title>Hindsight for Robot Fleets</title>
+<meta name="description" content="Hindsight for robot fleets: every robot failure makes the fleet smarter. Gemini 4 Argon finds real robot failures, rebuilds them as digital twins, trains a fix, and ships it only after verifying it.">
 <style>
-  /* Layout: one centered column; a hero film, then eight numbered steps, each one sentence plus one visual. */
+  /* Layout: launch-keynote rhythm. One idea per screen: a huge headline, one short line, one large visual. */
   :root {
     color-scheme: dark;
-    --bg: #050506; --card: #0f0f12; --ink: #f4f4f6; --mute: #8d8d96; --line: #222228;
-    --accent: #3d9bff; --ok: #34d17a; --bad: #ff5a4f;
+    --bg: #000; --panel: #0c0c0f; --ink: #f5f5f7; --mute: #a1a1a6; --line: #1f1f24;
+    --g1: #2ee6d6; --g2: #3b82f6; --g3: #a78bfa; --bad1: #ff6b6b; --bad2: #ff9f43;
     --display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-    --body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
   }
-  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { color-scheme: light; --bg:#fbfbfc; --card:#ffffff; --ink:#111114; --mute:#62626b; --line:#e4e4ea; --accent:#0a6cdf; } }
-  :root[data-theme="light"] { color-scheme: light; --bg:#fbfbfc; --card:#ffffff; --ink:#111114; --mute:#62626b; --line:#e4e4ea; --accent:#0a6cdf; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { color-scheme: light; --bg:#fbfbfd; --panel:#f2f2f5; --ink:#111114; --mute:#6e6e73; --line:#e4e4ea; --g1:#0fb5a8; --g2:#2563eb; --g3:#7c3aed; } }
+  :root[data-theme="light"] { color-scheme: light; --bg:#fbfbfd; --panel:#f2f2f5; --ink:#111114; --mute:#6e6e73; --line:#e4e4ea; --g1:#0fb5a8; --g2:#2563eb; --g3:#7c3aed; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
-  .wrap { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  header { padding-block: 72px 40px; }
-  .eyebrow { color: var(--accent); font-weight: 600; font-size: 15px; letter-spacing: .02em; }
-  h1 { font-family: var(--display); font-size: clamp(40px, 7vw, 76px); line-height: 1.03; letter-spacing: -.03em; margin: 10px 0 14px; text-wrap: balance; }
-  .lede { color: var(--mute); font-size: clamp(18px, 2.2vw, 22px); max-width: 640px; margin: 0 0 28px; }
-  video { width: 100%; max-width: 100%; border-radius: 16px; background: #000; display: block; }
-  .step { display: grid; grid-template-columns: 64px 1fr; gap: 8px 20px; padding-block: 48px; border-top: 1px solid var(--line); }
-  .n { font-family: var(--display); font-size: 40px; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
-  .step > div { min-width: 0; }
-  h2 { font-family: var(--display); font-size: clamp(26px, 3.6vw, 38px); line-height: 1.12; letter-spacing: -.02em; margin: 0 0 10px; text-wrap: balance; }
-  .say { color: var(--mute); font-size: 18px; max-width: 640px; margin: 0 0 22px; }
-  .say b { color: var(--ink); font-weight: 600; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  figure { margin: 0; } figcaption { color: var(--mute); font-size: 13px; margin-top: 6px; }
-  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; min-width: 150px; flex: 1; }
-  .stat .v { font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-  .stat .k { color: var(--mute); font-size: 13px; }
-  .quote { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--bad); border-radius: 12px; padding: 14px 16px; margin: 0 0 10px; font-size: 16px; }
-  .quote.ok { border-left-color: var(--ok); }
-  .quote .who { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--bad); margin-bottom: 4px; }
-  .quote.ok .who { color: var(--ok); }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .list { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; font-size: 15px; }
-  .list h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
-  .list.good h3 { color: var(--ok); } .list.bad h3 { color: var(--bad); }
-  .list ul { margin: 0; padding-left: 18px; color: var(--mute); }
-  .caps { display: grid; grid-template-columns: repeat(3, 1fr); color: var(--mute); font-size: 13px; text-align: center; margin-top: 6px; }
-  footer { border-top: 1px solid var(--line); padding-block: 40px 64px; color: var(--mute); font-size: 14px; }
-  footer a { color: var(--accent); }
-  @media (max-width: 640px) {
-    .step { grid-template-columns: 1fr; } .n { font-size: 28px; }
-    .two, .cols { grid-template-columns: 1fr; } .caps { font-size: 11px; }
-  }
-  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--display); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .grad { background: linear-gradient(100deg, var(--g1), var(--g2) 55%, var(--g3)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hot { background: linear-gradient(100deg, var(--bad1), var(--bad2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header { text-align: center; padding-block: 96px 56px; }
+  .eyebrow { color: var(--mute); font-size: 17px; font-weight: 500; letter-spacing: .01em; }
+  h1 { font-size: clamp(64px, 13vw, 150px); line-height: .95; letter-spacing: -.05em; margin: 14px 0 12px; font-weight: 800; }
+  .tag { font-size: clamp(24px, 3.6vw, 40px); font-weight: 600; letter-spacing: -.02em; margin: 0 0 44px; text-wrap: balance; }
+  video { width: 100%; max-width: 100%; display: block; border-radius: 22px; background: #000; }
+  section { text-align: center; padding-block: 88px; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(40px, 7vw, 84px); line-height: 1; letter-spacing: -.045em; margin: 0 0 14px; font-weight: 700; text-wrap: balance; }
+  .line { color: var(--mute); font-size: clamp(19px, 2.4vw, 26px); font-weight: 500; letter-spacing: -.01em; margin: 0 auto 40px; max-width: 760px; text-wrap: balance; }
+  .num { font-size: clamp(64px, 12vw, 140px); font-weight: 800; letter-spacing: -.05em; line-height: 1; margin: 8px 0 36px; }
+  .row { display: grid; gap: 14px; }
+  .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: repeat(3, 1fr); }
+  .r3 video { aspect-ratio: 4 / 3; object-fit: cover; }
+  .r2 video { aspect-ratio: 16 / 10; object-fit: cover; }
+  .cell { position: relative; min-width: 0; }
+  .chip { position: absolute; left: 14px; top: 12px; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.6); }
+  .chip.good { color: var(--g1); } .chip.bad { color: var(--bad1); }
+  .missing { display: none !important; }
+  footer { text-align: center; color: var(--mute); font-size: 15px; padding-block: 56px 80px; border-top: 1px solid var(--line); }
+  footer a { color: var(--g2); text-decoration: none; }
+  footer p { margin: 6px auto; max-width: 760px; }
+  @media (max-width: 640px) { .r2, .r3 { grid-template-columns: 1fr; } section { padding-block: 64px; } }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
-  <div class="eyebrow">Hindsight · built with Gemini 4 Argon</div>
-  <h1>Federated Robot Learning: Enabled by Argon</h1>
-  <p class="lede">Robots that learn from their own failures, with Argon finding, rebuilding, retraining and approving every fix.</p>
-  <video src="media/hindsight_1min.mp4" controls playsinline preload="metadata" poster=""></video>
+  <div class="eyebrow">Built with Gemini 4 Argon</div>
+  <h1 class="grad">Hindsight</h1>
+  <p class="tag">for robot fleets</p>
+  <p class="line" style="margin-bottom:40px;color:var(--ink)">Every robot failure makes the fleet smarter.</p>
+  <video src="media/hindsight_1min.mp4" controls playsinline preload="metadata"></video>
 </header>
 
-<section class="step"><div class="n">1</div><div>
-  <h2>Robot fleets collect thousands of hours of data.</h2>
-  <p class="say">Every robot records everything: camera, motion sensors, commands. We used real public footage from <b>FrodoBots</b> robots, indoors and outdoors.</p>
-  <div class="grid">
-    <figure><video src="media/sidewalk_real.mp4" autoplay muted loop playsinline></video></figure>
-    <figure><video src="media/garden_edge_real.mp4" autoplay muted loop playsinline></video></figure>
-    <figure><video src="media/dog_real.mp4" autoplay muted loop playsinline></video></figure>
+<section>
+  <h2>Thousands of hours.</h2>
+  <p class="line">Robot fleets record everything. Real failures are rare, and no one has time to find them.</p>
+  <div class="row r3">
+    <div class="cell"><video src="media/sidewalk_real.mp4" autoplay muted loop playsinline></video></div>
+    <div class="cell"><video src="media/dog_real.mp4" autoplay muted loop playsinline></video></div>
+    <div class="cell"><video src="media/garden_edge_real.mp4" autoplay muted loop playsinline></video></div>
   </div>
-</div></section>
+</section>
 
-<section class="step"><div class="n">2</div><div>
-  <h2>Engineers don't have time to review the failures.</h2>
-  <p class="say">Failures are rare and buried. Sensor alarms are mostly noise: video glitches, speed bumps, ramps.</p>
-  <div class="stats">
-    <div class="stat"><div class="v">7.7 h</div><div class="k">of raw footage scanned</div></div>
-    <div class="stat"><div class="v">130</div><div class="k">sensor alarms</div></div>
-    <div class="stat"><div class="v">2%</div><div class="k">of footage shows a real failure</div></div>
+<section>
+  <h2>Argon finds the failures.</h2>
+  <p class="line">It watches every alarm and keeps only what it can see go wrong.</p>
+  <div class="num grad">15 / 15</div>
+  <video src="media/barstool_real.mp4" autoplay muted loop playsinline></video>
+</section>
+
+<section>
+  <h2>Rebuilt from real footage.</h2>
+  <p class="line">Argon turns a few real frames into a digital twin you can't tell from the real thing.</p>
+  <div class="cell"><video src="media/coco_real_vs_twin.mp4" autoplay muted loop playsinline></video><span class="chip good">Real</span><span class="chip good" style="left:auto;right:14px">Twin</span></div>
+</section>
+
+<section>
+  <h2>Then made harder.</h2>
+  <p class="line">What if someone steps out? What if the truck runs the light?</p>
+  <div class="row r2">
+    <div class="cell"><video src="media/whatif_pedestrian.mp4" autoplay muted loop playsinline></video><span class="chip bad">Pedestrian</span></div>
+    <div class="cell"><video src="media/whatif_truck.mp4" autoplay muted loop playsinline></video><span class="chip bad">Red-light truck</span></div>
   </div>
-</div></section>
+</section>
 
-<section class="step"><div class="n">3</div><div>
-  <h2>Argon reviews them and keeps the failures that matter.</h2>
-  <p class="say">Argon watches each clip with its sensor log and confirms only what it can see happen, with a timestamp and a cause.</p>
-  <div class="stats" style="margin-bottom:12px">
-    <div class="stat"><div class="v">44</div><div class="k">failures confirmed by Argon</div></div>
-    <div class="stat"><div class="v">15 / 15</div><div class="k">correct on blind human review</div></div>
+<section>
+  <h2>Argon writes the reward.</h2>
+  <p class="line">From good rides and bad ones. No hand-tuning.</p>
+  <div class="row r2">
+    <div class="cell"><video src="media/good_ride.mp4" autoplay muted loop playsinline></video><span class="chip good">Good</span></div>
+    <div class="cell"><video src="media/barstool_real.mp4" autoplay muted loop playsinline></video><span class="chip bad">Bad</span></div>
   </div>
-  <figure><video src="media/barstool_real.mp4" autoplay muted loop playsinline></video>
-  <figcaption>"The robot's right wheel struck and climbed the leg of a wooden barstool, causing it to roll ninety degrees onto its side." (Argon)</figcaption></figure>
-</div></section>
+</section>
 
-<section class="step"><div class="n">4</div><div>
-  <h2>Argon builds a digital twin of each failure, then makes it harder.</h2>
-  <p class="say">The twin has to reproduce the real crash before it is trusted. Argon then generates 40 harder what-if variants, and can make the twin look like the real camera.</p>
-  <div class="two">
-    <figure><video src="media/barstool_twin_old.mp4" autoplay muted loop playsinline></video><figcaption>The twin reproduces the crash</figcaption></figure>
-    <figure><video src="media/barstool_variants.mp4" autoplay muted loop playsinline></video><figcaption>40 what-if variants</figcaption></figure>
+<section>
+  <h2>Argon catches it cheating.</h2>
+  <p class="line">When reinforcement learning games the reward, Argon rewrites it and trains again. On its own.</p>
+  <div class="num hot">Blocked</div>
+  <video src="media/barstool_twin_old_omni.mp4" autoplay muted loop playsinline></video>
+</section>
+
+<section>
+  <h2>Now it doesn't fail.</h2>
+  <p class="line">Indoors and outdoors. In every harder variant. Approved by Argon.</p>
+  <div class="num grad">0% → 100%</div>
+  <div class="row r2">
+    <div class="cell"><video src="media/barstool_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Indoor</span></div>
+    <div class="cell"><video src="media/sidewalk_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Outdoor</span></div>
   </div>
-  <div style="height:10px"></div>
-  <video src="media/coco_real_twin_omni.mp4" autoplay muted loop playsinline></video>
-  <div class="caps"><span>Real robot camera</span><span>Argon's 3D twin</span><span>Twin + Gemini Omni</span></div>
-</div></section>
+</section>
 
-<section class="step"><div class="n">5</div><div>
-  <h2>Argon writes the reward function by watching good and bad rides.</h2>
-  <p class="say">It reads two smooth rides and four real crashes and turns them into reward code.</p>
-  <div class="cols">
-    <div class="list good"><h3>Rewards</h3><ul><li>steady forward progress</li><li>wide clearance around furniture, pets and people</li><li>smooth speed and steering</li></ul></div>
-    <div class="list bad"><h3>Penalizes</h3><ul><li>tipping or falling over</li><li>collisions and near-misses</li><li>stalling, ramming, twitchy driving</li></ul></div>
-  </div>
-</div></section>
-
-<section class="step"><div class="n">6</div><div>
-  <h2>A reinforcement learning loop builds a better policy.</h2>
-  <p class="say">The robot retrains on the twin and its variants.</p>
-  <div class="stats">
-    <div class="stat"><div class="v">0% → 100%</div><div class="k">success on 40 variants</div></div>
-    <div class="stat"><div class="v">100% → 0%</div><div class="k">collisions</div></div>
-    <div class="stat"><div class="v">≥ 25 cm</div><div class="k">clearance in every variant</div></div>
-  </div>
-</div></section>
-
-<section class="step"><div class="n">7</div><div>
-  <h2>Argon checks for cheating and fixes its own reward.</h2>
-  <p class="say">RL finds shortcuts. Argon watches the result, names the hack, rewrites the reward and retrains, on its own in a Google-hosted sandbox.</p>
-  <div class="quote"><div class="who">Blocked</div>"The policy sits stationary, then creeps straight into the pole, avoiding the collision penalty."</div>
-  <div class="quote"><div class="who">Blocked</div>"It sideswipes the pole without triggering the collision flag."</div>
-  <div class="quote ok"><div class="who">Approved to ship</div>"Smoothly steers left to give the obstacle a wide berth, passes with 0.307 m clearance, and realigns without oscillation, stalling or collision."</div>
-  <figure style="margin-top:10px"><video src="media/barstool_story.mp4" autoplay muted loop playsinline></video></figure>
-  <div class="caps"><span>Real failure</span><span>Twin: old behavior</span><span>Twin: approved policy</span></div>
-</div></section>
-
-<section class="step"><div class="n">8</div><div>
-  <h2>Before shipping, Argon checks the fix against every other site.</h2>
-  <p class="say">Robots share only the small policy update, not their video. Argon tests each update on every site's scenarios and blocks anything that causes a regression elsewhere.</p>
-  <div class="quote ok"><div class="who">Accepted · Berkeley</div>"Eliminates falls and raises success from 0.4 to 1.0 in its home city, with no regressions in San Francisco or Hayward."</div>
-  <div class="quote"><div class="who">Rejected · San Francisco</div>"Improves San Francisco but degrades safety in Berkeley, increasing the fall rate from 0.6 to 0.8."</div>
-  <div class="stats" style="margin-top:12px">
-    <div class="stat"><div class="v">~105 B</div><div class="k">per update, instead of gigabytes of video</div></div>
-  </div>
-</div></section>
+<section>
+  <h2>Safe for every site.</h2>
+  <p class="line">Argon checks the fix against every other site. Robots share a tiny update, not their video. A human approves every deploy.</p>
+  <div class="num grad">~100 bytes</div>
+</section>
 
 <footer>
-  <p><b style="color:var(--ink)">Agents:</b> Gemini 4 Argon (reviewer, twin builder, reward engineer, verifier, fleet gate) · Antigravity managed agent (autonomous training loop) · Gemini Omni (photoreal twins) · MuJoCo + reinforcement learning.</p>
-  <p>Code: <a href="https://github.com/bouncypitch/hindsight">github.com/bouncypitch/hindsight</a></p>
-  <p>Data: FrodoBots-Mini-4K (CC-BY-SA-4.0), BitRobot/berkeley-frodobots-lerobot-7k (Apache-2.0); Coco Robotics sample clips from VAIL-UCLA/MIMIC, credited. Built in one day at the Gemini 4 Argon SF Hackathon.</p>
+  <p><b style="color:var(--ink)">Gemini 4 Argon</b> reviews, rebuilds, writes rewards, verifies and gates every update · Antigravity managed agent · Gemini Omni · MuJoCo</p>
+  <p><a href="https://github.com/bouncypitch/hindsight">github.com/bouncypitch/hindsight</a></p>
+  <p>Data: FrodoBots-Mini-4K (CC-BY-SA-4.0), BitRobot/berkeley-frodobots-lerobot-7k (Apache-2.0); Coco Robotics clips from VAIL-UCLA/MIMIC, credited.</p>
 </footer>
 </div>
+<script>
+// hide any clip that hasn't been rendered yet
+document.querySelectorAll("video").forEach(v => v.addEventListener("error", () => (v.closest(".cell") || v).classList.add("missing"), { once: true }));
+</script>
 </body>
 </html>
