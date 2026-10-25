@@ -108,8 +108,15 @@
   <p class="line" style="margin:18px auto 56px"><b style="color:var(--bad1)">Before:</b> the robot drives into the pole. <b style="color:var(--g1)">After:</b> it steers around it, in all 40 variants.</p>
   <p class="line">When it games the reward, Argon catches it, rewrites the reward and trains again. On its own.</p>
   <div class="num hot">Blocked</div>
-  <video src="media/hack_freeze.mp4" autoplay muted loop playsinline></video>
-  <p class="line" style="margin:22px auto 0"><b style="color:var(--ink)">The hack:</b> the robot learned to park in front of the chair leg until time ran out. No crash, so no penalty, but it never got anywhere. Argon spotted it, rewrote the reward, and training started again.</p>
+  <div class="row r2">
+    <div class="cell"><video src="media/hack_freeze.mp4" autoplay muted loop playsinline></video><span class="chip bad">Hack 1</span></div>
+    <div class="cell"><video src="media/hack_jump.mp4" autoplay muted loop playsinline></video><span class="chip bad">Hack 2</span></div>
+  </div>
+  <div class="row r2" style="margin-top:14px">
+    <p class="line" style="margin:0"><b style="color:var(--ink)">Parks in front of the chair leg</b> until time runs out. No crash, so no penalty, but it never gets anywhere.</p>
+    <p class="line" style="margin:0"><b style="color:var(--ink)">Launches off the curb</b> at full speed. It never flips, but slams its cargo at about 6 g.</p>
+  </div>
+  <p class="line" style="margin:28px auto 0">Argon spotted both, rewrote the reward, and training started again.</p>
 </section>
 
 <section>
