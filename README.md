@@ -1,5 +1,5 @@
 # Federated Robot Learning - Enabled by Argon
-**Demo site:** https://bouncypitch.github.io/hindsight/
+**Demo site:** https://bouncypitch.github.io/hindsight/ · **1-minute video:** https://youtu.be/ZgMhqIWLpNs
 
 
 https://github.com/user-attachments/assets/a595df6e-e516-4359-8197-53674437900a
