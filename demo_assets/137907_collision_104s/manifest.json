@@ -29,15 +29,6 @@
    "json": "06_verdict_round1.json"
   },
   {
-   "title": "RL round 2: before vs after",
-   "video": "05_twin_new_policy_round2.mp4",
-   "json": "05_rl_round2.json"
-  },
-  {
-   "title": "Argon verdict round 2",
-   "json": "06_verdict_round2.json"
-  },
-  {
    "title": "Trajectories for the photoreal viewer",
    "old": "07_traj_old.json",
    "new": "07_traj_new.json"

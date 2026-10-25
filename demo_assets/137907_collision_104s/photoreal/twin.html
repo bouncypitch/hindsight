@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Coco Robotics Digital Twin</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #111;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+  #ui {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18, 20, 24, 0.85);
+    backdrop-filter: blur(8px);
+    color: #eee;
+    padding: 8px 16px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    z-index: 10;
+    border: 1px solid rgba(255,255,255,0.12);
+    user-select: none;
+  }
+  #ui.hidden { display: none; }
+  #ui button {
+    background: #2b303b;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #ui button:hover { background: #3a4150; }
+  #ui input[type="range"] { width: 220px; accent-color: #f59e0b; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="ui">
+  <button id="playBtn">Pause</button>
+  <input id="scrubber" type="range" min="0" max="2.72" step="0.001" value="0">
+  <span id="timeLabel">0.00s</span>
+  <button id="camBtn">Cam: Robot</button>
+  <label>Pitch <input id="pitchSlider" type="range" min="-10" max="6" step="0.2" value="-2" style="width:70px"></label>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+
+// --- Embedded fallback trajectory ---
+const DEFAULT_TRAJ = {
+  "fps": 30,
+  "camera": {"hfov_deg": 120.0, "vfov_deg": 88.0, "height_m": 0.12, "aspect": 1.7777777777777777},
+  "frames": [
+    {"t": 0.0, "x": -0.0, "y": 0.0, "yaw": 0.0, "z": 0.152},
+    {"t": 0.68, "x": 0.3833, "y": 0.0001, "yaw": 0.0002, "z": 0.1499},
+    {"t": 1.36, "x": 0.8889, "y": 0.0002, "yaw": 0.0002, "z": 0.1499},
+    {"t": 2.04, "x": 1.3437, "y": 0.0046, "yaw": -0.018, "z": 0.15},
+    {"t": 2.72, "x": 1.3428, "y": 0.0047, "yaw": -0.0187, "z": 0.1499}
+  ],
+  "outcome": "collided",
+  "obstacle": {"x": 1.8, "y": -0.15, "r": 0.2},
+  "pedestrian": null
+};
+
+const params = new URLSearchParams(window.location.search);
+const trajUrl = params.get('traj');
+let camMode = params.get('cam') === 'chase' ? 'chase' : 'robot';
+const isCapture = params.get('capture') === '1';
+
+const uiEl = document.getElementById('ui');
+if (isCapture) uiEl.classList.add('hidden');
+
+let pitchDeg = -2.0;
+
+// Coordinate helper: sim (x, y, z) -> three (x, z, -y)
+function simToThree(x, y, z = 0) {
+  return new THREE.Vector3(x, z, -y);
+}
+
+// --- Renderer & Scene Setup ---
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  preserveDrawingBuffer: true,
+  powerPreference: 'high-performance'
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xeef2f5);
+scene.fog = new THREE.FogExp2(0xe2e6ea, 0.016);
+
+// --- Cameras ---
+const robotCam = new THREE.PerspectiveCamera(
+  88.0,
+  window.innerWidth / window.innerHeight || 1.7777777777777777,
+  0.035,
+  120.0
+);
+robotCam.rotation.order = 'YXZ';
+
+const chaseCam = new THREE.PerspectiveCamera(
+  60.0,
+  window.innerWidth / window.innerHeight || 1.7777777777777777,
+  0.1,
+  150.0
+);
+
+// --- Post-Processing Composer (matches wide-angle robot camera look) ---
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, camMode === 'chase' ? chaseCam : robotCam);
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.18, // subtle halation around bright overcast sky through branches
+  0.45,
+  0.85
+);
+composer.addPass(bloomPass);
+
+const CameraLookShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0.0 },
+    uIsRobotCam: { value: 1.0 }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uIsRobotCam;
+    varying vec2 vUv;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      vec2 centered = uv * 2.0 - 1.0;
+      float r2 = dot(centered, centered);
+      float r = sqrt(r2);
+
+      // Subtle wide-angle chromatic aberration & edge softness for robot camera
+      vec2 offset = centered * (0.0018 * r2) * uIsRobotCam;
+      // Slight motion/sensor softness via 5-tap blur
+      vec2 px = vec2(1.0 / 960.0, 1.0 / 540.0) * 0.75 * uIsRobotCam;
+      vec3 col = texture2D(tDiffuse, uv).rgb * 0.44;
+      col += texture2D(tDiffuse, uv + vec2(px.x, 0.0) + offset).rgb * 0.14;
+      col += texture2D(tDiffuse, uv - vec2(px.x, 0.0) - offset).rgb * 0.14;
+      col += texture2D(tDiffuse, uv + vec2(0.0, px.y)).rgb * 0.14;
+      col += texture2D(tDiffuse, uv - vec2(0.0, px.y)).rgb * 0.14;
+
+      if (uIsRobotCam > 0.5) {
+        // Match color grade of real camera: slightly lifted blacks, warm-neutral midtones
+        col = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.08);
+        col = col * vec3(1.01, 1.00, 0.98) + vec3(0.012, 0.012, 0.014);
+
+        // Subtle sensor noise
+        float n = (hash(uv * 400.0 + uTime * 7.1) - 0.5) * 0.016;
+        col += n;
+
+        // Characteristic dark housing vignette in the 4 extreme corners of the wide-angle camera
+        vec2 cornerVec = centered * vec2(1.0, 0.92);
+        float cr = length(cornerVec);
+        float vig = smoothstep(1.36, 1.15, cr);
+        // Extra soft darkening in extreme corners matching reference frames
+        float hardCorner = smoothstep(1.39, 1.24, cr);
+        col *= mix(0.28, 1.0, vig) * mix(0.15, 1.0, hardCorner);
+      }
+
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }
+  `
+};
+const lookPass = new ShaderPass(CameraLookShader);
+composer.addPass(lookPass);
+
+// --- Lighting (Overcast Autumn Daytime on Campus Plaza) ---
+const hemiLight = new THREE.HemisphereLight(0xf2f6fa, 0x707478, 1.85);
+hemiLight.position.set(0, 20, 0);
+scene.add(hemiLight);
+
+const dirLight = new THREE.DirectionalLight(0xfff7ea, 1.25);
+dirLight.position.set(-4.0, 11.0, -5.0);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 35;
+const d = 8.0;
+dirLight.shadow.camera.left = -d;
+dirLight.shadow.camera.right = d;
+dirLight.shadow.camera.top = d;
+dirLight.shadow.camera.bottom = -d;
+dirLight.shadow.bias = -0.0005;
+dirLight.shadow.radius = 3.5;
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xdce6f2, 0.55);
+fillLight.position.set(6.0, 5.0, 4.0);
+scene.add(fillLight);
+
+// --- Procedural Textures ---
+
+// 1. Sky Dome Texture (bright overcast daytime sky with subtle warm horizon glow)
+function createSkyTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0.0, '#d8e4f0');
+  grad.addColorStop(0.45, '#eef3f7');
+  grad.addColorStop(0.78, '#f8f7f2');
+  grad.addColorStop(1.0, '#d5d6d2');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 512, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const skyGeo = new THREE.SphereGeometry(85, 32, 24);
+const skyMat = new THREE.MeshBasicMaterial({ map: createSkyTexture(), side: THREE.BackSide, fog: false });
+scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+// 2. Concrete Plaza Ground Texture (with exact expansion joints, bike parking lines, stains & leaves)
+function createPlazaTexture() {
+  const size = 2048;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+
+  // World mapping: canvas covers simX in [-2.0, +4.0] (6m), simY in [-3.0, +3.0] (6m)
+  const xMin = -2.0, xMax = 4.0;
+  const yMin = -3.0, yMax = 3.0;
+  const toU = (x) => ((x - xMin) / (xMax - xMin)) * size;
+  // In Three.js PlaneGeometry(6, 6) rotated -PI/2 around X:
+  // localX = threeX = simX, localY = -threeZ = simY -> canvas Y goes from top (localY=+3 -> simY=+3) to bottom (simY=-3)
+  const toV = (y) => ((yMax - y) / (yMax - yMin)) * size;
+
+  // Base concrete color (#7c8087)
+  ctx.fillStyle = '#7d8188';
+  ctx.fillRect(0, 0, size, size);
+
+  // Add subtle mottled concrete variation
+  for (let i = 0; i < 18000; i++) {
+    const px = Math.random() * size;
+    const py = Math.random() * size;
+    const r = 1 + Math.random() * 5;
+    const v = 115 + Math.floor(Math.random() * 24);
+    ctx.fillStyle = `rgba(${v}, ${v + 3}, ${v + 8}, 0.08)`;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Broad subtle tire/weathering patches
+  for (let i = 0; i < 120; i++) {
+    const px = Math.random() * size;
+    const py = Math.random() * size;
+    const rx = 20 + Math.random() * 90;
+    const ry = 20 + Math.random() * 90;
+    const dark = Math.random() > 0.5;
+    ctx.fillStyle = dark ? 'rgba(95, 99, 105, 0.07)' : 'rgba(142, 146, 152, 0.06)';
+    ctx.beginPath();
+    ctx.ellipse(px, py, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Faded white painted bike-parking box lines on the concrete!
+  // 1) Long line parallel to curb at simX = 0.88, from simY = +2.6 to simY = +0.20
+  // 2) Perpendicular divider line at simY = +0.20, from simX = 0.88 to simX = 1.62 (stopping ~34cm before curb, as in Frame 4!)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(192, 195, 194, 0.72)';
+  ctx.lineWidth = (0.145 / 6.0) * size;
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+  ctx.beginPath();
+  ctx.moveTo(toU(0.86), toV(2.65));
+  ctx.lineTo(toU(0.88), toV(0.20));
+  ctx.lineTo(toU(1.63), toV(0.20));
+  ctx.stroke();
+
+  // Weather/distress the white painted line so concrete shows through slightly
+  for (let i = 0; i < 900; i++) {
+    const px = toU(0.75 + Math.random() * 1.0);
+    const py = toV(-0.05 + Math.random() * 2.7);
+    ctx.fillStyle = 'rgba(124, 128, 135, 0.28)';
+    ctx.fillRect(px, py, 3 + Math.random() * 8, 3 + Math.random() * 8);
+  }
+  ctx.restore();
+
+  // Concrete slab expansion joints / dark seams matching all 4 frames!
+  function drawSeam(x1, y1, x2, y2, widthM = 0.016, alpha = 0.65) {
+    // Light bevel edge
+    ctx.strokeStyle = `rgba(148, 152, 158, ${alpha * 0.45})`;
+    ctx.lineWidth = (widthM * 1.9 / 6.0) * size;
+    ctx.beginPath();
+    ctx.moveTo(toU(x1), toV(y1));
+    ctx.lineTo(toU(x2), toV(y2));
+    ctx.stroke();
+
+    // Dark recessed joint groove
+    ctx.strokeStyle = `rgba(68, 71, 76, ${alpha})`;
+    ctx.lineWidth = (widthM / 6.0) * size;
+    ctx.beginPath();
+    ctx.moveTo(toU(x1), toV(y1));
+    ctx.lineTo(toU(x2), toV(y2));
+    ctx.stroke();
+  }
+
+  // Main seam along the left edge of the white stripe continuing all the way to the curb (simY = +0.265)
+  drawSeam(-1.5, 0.265, 1.98, 0.265, 0.015, 0.72);
+  // Parallel seam to the right (visible in Frame 1 & Frame 4 on the right side)
+  drawSeam(-1.5, -0.58, 1.98, -0.42, 0.015, 0.60);
+  // Parallel seam to the left
+  drawSeam(-1.5, 1.38, 1.98, 1.38, 0.015, 0.60);
+  // Cross seams parallel to the curb
+  drawSeam(0.72, -2.8, 0.78, 2.8, 0.016, 0.65);
+  drawSeam(1.64, -2.8, 1.66, 2.8, 0.014, 0.58);
+  drawSeam(-0.25, -2.8, -0.20, 2.8, 0.015, 0.55);
+
+  // Subtle tire/curving track mark in Frame 1 foreground
+  ctx.strokeStyle = 'rgba(104, 108, 114, 0.22)';
+  ctx.lineWidth = (0.09 / 6.0) * size;
+  ctx.beginPath();
+  ctx.moveTo(toU(0.15), toV(0.55));
+  ctx.quadraticCurveTo(toU(0.55), toV(0.22), toU(0.95), toV(-0.35));
+  ctx.stroke();
+
+  // Dirt & leaf accumulation along the base of the curb (simX = 1.90..1.98)
+  const curbGrad = ctx.createLinearGradient(toU(1.75), 0, toU(1.98), 0);
+  curbGrad.addColorStop(0, 'rgba(70, 68, 62, 0.0)');
+  curbGrad.addColorStop(1, 'rgba(58, 55, 50, 0.45)');
+  ctx.fillStyle = curbGrad;
+  ctx.fillRect(toU(1.75), 0, toU(1.98) - toU(1.75), size);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+const groundGroup = new THREE.Group();
+scene.add(groundGroup);
+
+// Main outer plaza plane
+const outerGroundGeo = new THREE.PlaneGeometry(80, 80);
+const outerGroundMat = new THREE.MeshStandardMaterial({
+  color: 0x7d8188,
+  roughness: 0.88,
+  metalness: 0.05
+});
+const outerGround = new THREE.Mesh(outerGroundGeo, outerGroundMat);
+outerGround.rotation.x = -Math.PI / 2;
+outerGround.position.y = -0.002;
+outerGround.receiveShadow = true;
+groundGroup.add(outerGround);
+
+// High-res detailed inner plaza patch covering simX [-2, 4], simY [-3, 3] -> center at simX=1.0, simY=0.0
+const innerGroundGeo = new THREE.PlaneGeometry(6.0, 6.0);
+const innerGroundMat = new THREE.MeshStandardMaterial({
+  map: createPlazaTexture(),
+  roughness: 0.86,
+  metalness: 0.05
+});
+const innerGround = new THREE.Mesh(innerGroundGeo, innerGroundMat);
+innerGround.rotation.x = -Math.PI / 2;
+innerGround.position.set(1.0, 0.001, 0.0);
+innerGround.receiveShadow = true;
+groundGroup.add(innerGround);
+
+// Small scattered autumn leaves on the concrete near the rover, curb, and bin
+const leafGeo = new THREE.PlaneGeometry(0.032, 0.018);
+const leafColors = [0xc89e32, 0xb57c28, 0x9c6224, 0xd4b242];
+const leafPositions = [
+  [1.48, 0.27], [1.62, 0.16], [1.72, -0.22], [1.75, -0.31],
+  [1.68, -0.38], [1.82, -0.52], [1.85, 0.08], [1.91, 0.34],
+  [1.35, -0.28], [1.88, -0.18], [1.79, -0.64], [1.55, 0.42]
+];
+leafPositions.forEach(([lx, ly], idx) => {
+  const lm = new THREE.MeshStandardMaterial({
+    color: leafColors[idx % leafColors.length],
+    roughness: 0.8,
+    side: THREE.DoubleSide
+  });
+  const leaf = new THREE.Mesh(leafGeo, lm);
+  leaf.position.copy(simToThree(lx, ly, 0.003));
+  leaf.rotation.x = -Math.PI / 2;
+  leaf.rotation.z = idx * 1.7;
+  groundGroup.add(leaf);
+});
+
+// --- Concrete Curb & Raised Grass Planter Bed (simX >= 1.96) ---
+function createCurbTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#7e8287';
+  ctx.fillRect(0, 0, 1024, 256);
+
+  // Subtle concrete grain & weathering
+  for (let i = 0; i < 4000; i++) {
+    const x = Math.random() * 1024;
+    const y = Math.random() * 256;
+    const v = 112 + Math.floor(Math.random() * 28);
+    ctx.fillStyle = `rgba(${v},${v + 2},${v + 5},0.12)`;
+    ctx.fillRect(x, y, 3, 3);
+  }
+  // Top highlight & bottom moisture darkening
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0.0, 'rgba(165, 168, 172, 0.35)');
+  g.addColorStop(0.15, 'rgba(130, 134, 138, 0.0)');
+  g.addColorStop(0.85, 'rgba(80, 82, 84, 0.15)');
+  g.addColorStop(1.0, 'rgba(55, 56, 58, 0.45)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 1024, 256);
+
+  // Vertical block joints
+  ctx.strokeStyle = 'rgba(62, 65, 70, 0.75)';
+  ctx.lineWidth = 5;
+  for (let x = 256; x < 1024; x += 256) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 256);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.set(4, 1);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const curbMat = new THREE.MeshStandardMaterial({
+  map: createCurbTexture(),
+  roughness: 0.85,
+  metalness: 0.05
+});
+
+// Curb runs along simX = 1.96..2.10, simY = -2.5..+4.5, height = 0.165 m
+const curbGeo = new THREE.BoxGeometry(0.14, 0.165, 7.5);
+const curbMesh = new THREE.Mesh(curbGeo, curbMat);
+curbMesh.position.copy(simToThree(2.03, 1.0, 0.0825));
+curbMesh.castShadow = true;
+curbMesh.receiveShadow = true;
+scene.add(curbMesh);
+
+// Grass bed behind the curb
+function createGrassTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4e5f2e';
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 9000; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    ctx.fillStyle = Math.random() > 0.12
+      ? `rgba(${65 + Math.floor(Math.random() * 30)}, ${82 + Math.floor(Math.random() * 35)}, ${35 + Math.floor(Math.random() * 20)}, 0.35)`
+      : 'rgba(185, 152, 52, 0.55)'; // tiny fallen yellow leaves in grass
+    ctx.fillRect(x, y, 2 + Math.random() * 3, 2 + Math.random() * 3);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 6);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const grassGeo = new THREE.BoxGeometry(6.0, 0.16, 7.5);
+const grassMat = new THREE.MeshStandardMaterial({
+  map: createGrassTexture(),
+  roughness: 0.95
+});
+const grassBed = new THREE.Mesh(grassGeo, grassMat);
+grassBed.position.copy(simToThree(5.05, 1.0, 0.08));
+grassBed.receiveShadow = true;
+scene.add(grassBed);
+
+// --- Dark Green Manicured Bushes & Autumn Trees on the Planter Bed ---
+function createBushTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#25321f';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 3500; i++) {
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const g = 34 + Math.floor(Math.random() * 32);
+    ctx.fillStyle = `rgb(${Math.floor(g * 0.72)}, ${g}, ${Math.floor(g * 0.58)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 2 + Math.random() * 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const bushTex = createBushTexture();
+const bushMat = new THREE.MeshStandardMaterial({
+  map: bushTex,
+  roughness: 0.92,
+  metalness: 0.0
+});
+const stemMat = new THREE.MeshStandardMaterial({ color: 0x4a3f32, roughness: 0.9 });
+
+function addManicuredBush(simX, simY, radius, height) {
+  const group = new THREE.Group();
+  group.position.copy(simToThree(simX, simY, 0.16));
+
+  // Woody stems at base
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.024, height * 0.45, 6), stemMat);
+    stem.position.set(Math.cos(a) * radius * 0.22, height * 0.22, Math.sin(a) * radius * 0.22);
+    stem.rotation.z = (Math.random() - 0.5) * 0.35;
+    stem.rotation.x = (Math.random() - 0.5) * 0.35;
+    group.add(stem);
+  }
+
+  // Clustered foliage puffs forming a realistic trimmed dome shrub
+  const mainSphere = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 14), bushMat);
+  mainSphere.scale.set(1.05, (height * 0.58) / radius, 1.05);
+  mainSphere.position.y = height * 0.56;
+  mainSphere.castShadow = true;
+  group.add(mainSphere);
+
+  for (let i = 0; i < 14; i++) {
+    const phi = Math.random() * Math.PI * 2;
+    const theta = Math.random() * Math.PI * 0.65;
+    const r = radius * 0.42;
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), bushMat);
+    puff.position.set(
+      Math.sin(theta) * Math.cos(phi) * radius * 0.68,
+      height * 0.55 + Math.cos(theta) * height * 0.26,
+      Math.sin(theta) * Math.sin(phi) * radius * 0.68
+    );
+    puff.castShadow = true;
+    group.add(puff);
+  }
+  scene.add(group);
+}
+
+// Exact bush placement matching Frame 2, 3, 4:
+addManicuredBush(2.65, 0.76, 0.52, 0.92); // Main large bush on left of Frame 4
+addManicuredBush(3.35, 0.52, 0.38, 0.72); // Secondary bush just right/behind main bush
+addManicuredBush(4.20, 0.34, 0.18, 0.26); // Small low round shrub in middle gap
+addManicuredBush(2.85, 0.04, 0.40, 0.70); // Medium round bush directly behind the rover
+
+// Autumn Trees (trunks, bare branches, and golden-yellow foliage clusters)
+const barkMat = new THREE.MeshStandardMaterial({ color: 0x4b4238, roughness: 0.92 });
+const goldLeafMat = new THREE.MeshStandardMaterial({
+  color: 0xb89635,
+  roughness: 0.85
+});
+const warmGoldLeafMat = new THREE.MeshStandardMaterial({
+  color: 0xcca83e,
+  roughness: 0.85
+});
+
+function addTree(simX, simY, trunkR, height, hasGoldenLeaves = true, leanY = 0) {
+  const tg = new THREE.Group();
+  tg.position.copy(simToThree(simX, simY, 0.16));
+
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(trunkR * 0.65, trunkR, height * 0.55, 10), barkMat);
+  trunk.position.y = height * 0.275;
+  trunk.rotation.x = leanY;
+  trunk.castShadow = true;
+  tg.add(trunk);
+
+  // Main branches
+  const branchCount = 6;
+  for (let i = 0; i < branchCount; i++) {
+    const angle = (i / branchCount) * Math.PI * 2 + 0.4;
+    const bLen = height * (0.45 + (i % 3) * 0.12);
+    const branch = new THREE.Mesh(new THREE.CylinderGeometry(trunkR * 0.15, trunkR * 0.42, bLen, 7), barkMat);
+    const tilt = 0.28 + (i % 2) * 0.16;
+    branch.position.set(
+      Math.cos(angle) * bLen * Math.sin(tilt) * 0.45,
+      height * 0.46 + bLen * Math.cos(tilt) * 0.45,
+      Math.sin(angle) * bLen * Math.sin(tilt) * 0.45
+    );
+    branch.rotation.z = -Math.cos(angle) * tilt;
+    branch.rotation.x = Math.sin(angle) * tilt;
+    tg.add(branch);
+
+    // Finer sub-branches against the sky
+    for (let j = 0; j < 3; j++) {
+      const subLen = bLen * 0.55;
+      const sub = new THREE.Mesh(new THREE.CylinderGeometry(0.008, trunkR * 0.15, subLen, 5), barkMat);
+      const subAngle = angle + (j - 1) * 0.55;
+      sub.position.set(
+        branch.position.x + Math.cos(subAngle) * 0.35,
+        branch.position.y + subLen * 0.4,
+        branch.position.z + Math.sin(subAngle) * 0.35
+      );
+      sub.rotation.z = -Math.cos(subAngle) * 0.48;
+      sub.rotation.x = Math.sin(subAngle) * 0.48;
+      tg.add(sub);
+    }
+
+    if (hasGoldenLeaves) {
+      for (let k = 0; k < 5; k++) {
+        const puff = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.28 + (k % 3) * 0.12, 1),
+          (i + k) % 2 === 0 ? goldLeafMat : warmGoldLeafMat
+        );
+        puff.position.set(
+          branch.position.x + (Math.random() - 0.5) * 0.7,
+          branch.position.y + 0.2 + Math.random() * 0.9,
+          branch.position.z + (Math.random() - 0.5) * 0.7
+        );
+        tg.add(puff);
+      }
+    }
+  }
+  scene.add(tg);
+}
+
+// Prominent tree trunk right behind the left side of the recycling bin (seen in Frames 1, 2, 3)
+addTree(2.38, -0.05, 0.11, 6.5, true, 0.03);
+// Golden autumn tree behind the rover/bush gap
+addTree(3.55, 0.22, 0.10, 6.2, true, -0.02);
+// Bare/sparse branching trees on the left (seen in Frame 1, 2, 3)
+addTree(2.90, 0.98, 0.08, 6.0, false, 0.04);
+addTree(3.10, 1.55, 0.09, 6.4, false, -0.03);
+addTree(2.85, 2.25, 0.10, 6.5, true, 0.02);
+addTree(3.60, -0.85, 0.11, 6.2, true, 0.0);
+
+// --- Campus Buildings (Right Building with Windows & Portico, Far Left Building) ---
+function createCampusBuildingTexture() {
+  const c = document.createElement('canvas');
+  c.width = 1024;
+  c.height = 512;
+  const ctx = c.getContext('2d');
+  // Light warm-grey stone cladding
+  ctx.fillStyle = '#c2beb4';
+  ctx.fillRect(0, 0, 1024, 512);
+
+  // Horizontal floor bands and vertical piers
+  for (let row = 0; row < 4; row++) {
+    const y = 30 + row * 115;
+    for (let col = 0; col < 12; col++) {
+      const x = 24 + col * 82;
+      // Recessed window frame
+      ctx.fillStyle = '#8b8880';
+      ctx.fillRect(x - 4, y - 4, 54, 78);
+      // Glass pane with sky/tree reflection
+      const wg = ctx.createLinearGradient(x, y, x, y + 70);
+      wg.addColorStop(0, '#6a8298');
+      wg.addColorStop(0.5, '#8fa6ba');
+      wg.addColorStop(1, '#526270');
+      ctx.fillStyle = wg;
+      ctx.fillRect(x, y, 46, 70);
+      // Window mullions
+      ctx.strokeStyle = '#d0cec6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, 46, 70);
+      ctx.beginPath();
+      ctx.moveTo(x, y + 24);
+      ctx.lineTo(x + 46, y + 24);
+      ctx.moveTo(x + 23, y + 24);
+      ctx.lineTo(x + 23, y + 70);
+      ctx.stroke();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const bldgTex = createCampusBuildingTexture();
+const bldgMat = new THREE.MeshStandardMaterial({ map: bldgTex, roughness: 0.75 });
+
+// Right campus building visible in the upper-right of Frames 1, 2, 3, 4
+const rightBldg = new THREE.Mesh(new THREE.BoxGeometry(14.0, 11.0, 4.0), bldgMat);
+rightBldg.position.copy(simToThree(5.5, -4.8, 5.5));
+rightBldg.rotation.y = 0.12;
+scene.add(rightBldg);
+
+// Dark grey entrance portico & lit lobby on the right building (visible in Frame 3 upper-right)
+const porticoGroup = new THREE.Group();
+porticoGroup.position.copy(simToThree(4.2, -2.9, 0.0));
+porticoGroup.rotation.y = 0.12;
+const porticoFrameMat = new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.6 });
+const canopy = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.45, 1.2), porticoFrameMat);
+canopy.position.set(0, 2.35, 0);
+porticoGroup.add(canopy);
+const pillarL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 2.4, 0.4), porticoFrameMat);
+pillarL.position.set(-1.1, 1.2, 0.3);
+porticoGroup.add(pillarL);
+const pillarR = new THREE.Mesh(new THREE.BoxGeometry(0.32, 2.4, 0.4), porticoFrameMat);
+pillarR.position.set(1.1, 1.2, 0.3);
+porticoGroup.add(pillarR);
+const lobbyGlass = new THREE.Mesh(
+  new THREE.PlaneGeometry(2.0, 1.9),
+  new THREE.MeshBasicMaterial({ color: 0xe8eed8 })
+);
+lobbyGlass.position.set(0, 1.15, 0.45);
+lobbyGlass.rotation.y = Math.PI;
+porticoGroup.add(lobbyGlass);
+scene.add(porticoGroup);
+
+// Distant left building visible in Frame 1 background-left
+const leftBldg = new THREE.Mesh(new THREE.BoxGeometry(3.0, 9.0, 12.0), bldgMat);
+leftBldg.position.copy(simToThree(11.0, 6.5, 4.5));
+scene.add(leftBldg);
+
+// --- Double Recycling & Trash Bin (simX = 1.78..2.14, simY = -0.04..-0.90) ---
+function createBinDoorTexture(isRecyclable) {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 768;
+  const ctx = c.getContext('2d');
+
+  // Base painted metal color
+  ctx.fillStyle = isRecyclable ? '#88584a' : '#464a4f';
+  ctx.fillRect(0, 0, 512, 768);
+
+  // Subtle metallic wear
+  for (let i = 0; i < 2000; i++) {
+    ctx.fillStyle = isRecyclable ? 'rgba(155,105,90,0.06)' : 'rgba(90,95,100,0.06)';
+    ctx.fillRect(Math.random() * 512, Math.random() * 768, 4, 4);
+  }
+
+  ctx.fillStyle = 'rgba(232, 228, 222, 0.88)';
+  ctx.strokeStyle = 'rgba(232, 228, 222, 0.88)';
+  ctx.textAlign = 'center';
+
+  // Header text ("可回收物" / "其他垃圾")
+  ctx.font = 'bold 46px sans-serif';
+  ctx.fillText(isRecyclable ? '校园可回收物' : '其他垃圾', 256, 110);
+
+  // Triangular recycling / waste emblem
+  ctx.lineWidth = 12;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(256, 175);
+  ctx.lineTo(320, 285);
+  ctx.lineTo(192, 285);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText(isRecyclable ? '可回收物' : '其他垃圾', 256, 330);
+  ctx.font = '18px sans-serif';
+  ctx.fillText(isRecyclable ? 'RECYCLABLE' : 'OTHER WASTE', 256, 358);
+
+  // 2 rows x 3 columns of small white rounded-square classification icons
+  ctx.lineWidth = 5;
+  for (let r = 0; r < 2; r++) {
+    for (let col = 0; col < 3; col++) {
+      const ix = 115 + col * 105;
+      const iy = 400 + r * 105;
+      ctx.strokeRect(ix, iy, 72, 72);
+      // Simple icon graphic inside
+      ctx.beginPath();
+      ctx.moveTo(ix + 18, iy + 50);
+      ctx.lineTo(ix + 36, iy + 22);
+      ctx.lineTo(ix + 54, iy + 50);
+      ctx.stroke();
+    }
+  }
+
+  // Door latch keyhole
+  const lx = isRecyclable ? 465 : 47;
+  ctx.fillStyle = '#c8ccd0';
+  ctx.beginPath();
+  ctx.arc(lx, 360, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.fillRect(lx - 3, 354, 6, 12);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function buildDoubleRecyclingBin() {
+  const binGroup = new THREE.Group();
+  // Position left-front corner at sim (1.78, -0.04, 0)
+  binGroup.position.copy(simToThree(1.78, -0.04, 0));
+
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x3b3e43, roughness: 0.62, metalness: 0.25 });
+  const darkInteriorMat = new THREE.MeshStandardMaterial({ color: 0x181a1d, roughness: 0.9 });
+  const leftDoorMat = new THREE.MeshStandardMaterial({
+    map: createBinDoorTexture(true),
+    roughness: 0.58,
+    metalness: 0.15
+  });
+  const rightDoorMat = new THREE.MeshStandardMaterial({
+    map: createBinDoorTexture(false),
+    roughness: 0.58,
+    metalness: 0.15
+  });
+
+  // Note: in Three.js, sim -y is +Z! So moving right from simY=-0.04 to simY=-0.90 is +Z from 0 to +0.86
+  // Depth along +X is 0.36m (from 0 to +0.36)
+
+  // Left vertical post (width 0.06m in Z, height 0.96m in Y, depth 0.36m in X)
+  const postL = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.96, 0.065), frameMat);
+  postL.position.set(0.18, 0.48, 0.0325);
+  postL.castShadow = true;
+  postL.receiveShadow = true;
+  binGroup.add(postL);
+
+  // Center vertical divider post
+  const postC = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.96, 0.065), frameMat);
+  postC.position.set(0.18, 0.48, 0.455);
+  postC.castShadow = true;
+  binGroup.add(postC);
+
+  // Right vertical post (brownish-dark steel)
+  const postR = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.94, 0.055), frameMat);
+  postR.position.set(0.18, 0.47, 0.855);
+  postR.castShadow = true;
+  binGroup.add(postR);
+
+  // Bottom horizontal rail (leaving a 0.075m gap above ground, just like Frame 4!)
+  const bottomRail = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.035, 0.88), frameMat);
+  bottomRail.position.set(0.18, 0.09, 0.44);
+  binGroup.add(bottomRail);
+
+  // Shadowed interior box behind doors & upper disposal slots
+  const backBox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.86, 0.82), darkInteriorMat);
+  backBox.position.set(0.21, 0.50, 0.44);
+  binGroup.add(backBox);
+
+  // Left door (Terracotta brown, Z from 0.065 to 0.422, Y from 0.11 to 0.68)
+  const doorL = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.57, 0.355), leftDoorMat);
+  doorL.position.set(0.012, 0.395, 0.243);
+  doorL.castShadow = true;
+  doorL.receiveShadow = true;
+  binGroup.add(doorL);
+
+  // Right door (Charcoal grey, Z from 0.488 to 0.825, Y from 0.11 to 0.66)
+  const doorR = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.55, 0.335), rightDoorMat);
+  doorR.position.set(0.015, 0.385, 0.656);
+  doorR.castShadow = true;
+  doorR.receiveShadow = true;
+  binGroup.add(doorR);
+
+  // Top overhanging hood / sloped canopy
+  const topHood = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.09, 0.90), frameMat);
+  topHood.position.set(0.17, 0.98, 0.44);
+  topHood.rotation.z = 0.12;
+  topHood.castShadow = true;
+  binGroup.add(topHood);
+
+  // Small white label on center post upper section
+  const centerLabel = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.042, 0.11),
+    new THREE.MeshStandardMaterial({ color: 0xd0d4d8, roughness: 0.6 })
+  );
+  centerLabel.position.set(-0.002, 0.78, 0.455);
+  centerLabel.rotation.y = -Math.PI / 2;
+  binGroup.add(centerLabel);
+
+  // Yellow plastic bag tucked into top-left opening (distinctive detail in Frame 3 & 4!)
+  const bagMat = new THREE.MeshStandardMaterial({
+    color: 0xd8c63b,
+    roughness: 0.45,
+    side: THREE.DoubleSide
+  });
+  const bagGeo = new THREE.ConeGeometry(0.065, 0.19, 6);
+  const bagMesh = new THREE.Mesh(bagGeo, bagMat);
+  bagMesh.position.set(0.02, 0.77, -0.015);
+  bagMesh.rotation.x = -0.45;
+  bagMesh.rotation.z = 0.35;
+  binGroup.add(bagMesh);
+
+  // Small white disposable cup/litter under right bin gap (visible in Frame 4 bottom-right of bin)
+  const cup = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.028, 0.02, 0.065, 10),
+    new THREE.MeshStandardMaterial({ color: 0xe6e4dc, roughness: 0.6 })
+  );
+  cup.position.set(0.06, 0.032, 0.81);
+  cup.rotation.z = 1.25;
+  binGroup.add(cup);
+
+  scene.add(binGroup);
+}
+buildDoubleRecyclingBin();
+
+// --- Stationary Small 4-Wheeled Rover (The Obstacle!) ---
+function createTireTreadTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 128;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1e2024';
+  ctx.fillRect(0, 0, 256, 128);
+
+  // Chevron V-shaped off-road lugs matching Frame 4!
+  ctx.strokeStyle = '#383c42';
+  ctx.lineWidth = 9;
+  for (let x = -32; x < 288; x += 28) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 22, 64);
+    ctx.lineTo(x, 128);
+    ctx.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const roverGroup = new THREE.Group();
+scene.add(roverGroup);
+
+function buildStationaryRover() {
+  const treadTex = createTireTreadTexture();
+  const tireMat = new THREE.MeshStandardMaterial({
+    map: treadTex,
+    roughness: 0.78,
+    metalness: 0.08
+  });
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0x16181b, roughness: 0.5, metalness: 0.4 });
+  const darkChassisMat = new THREE.MeshStandardMaterial({ color: 0x35393f, roughness: 0.62, metalness: 0.25 });
+  const lightHoodMat = new THREE.MeshStandardMaterial({ color: 0x8d949d, roughness: 0.45, metalness: 0.22 });
+  const topPlateMat = new THREE.MeshStandardMaterial({ color: 0xa4abb4, roughness: 0.4, metalness: 0.25 });
+  const springMat = new THREE.MeshStandardMaterial({ color: 0xc8cfd6, roughness: 0.3, metalness: 0.75 });
+  const lensMat = new THREE.MeshStandardMaterial({ color: 0x0d0f12, roughness: 0.15, metalness: 0.8 });
+
+  // Localrover coordinates: -X is front (facing the robot), +Y is up, +Z is right (sim -y)
+  function createRoverWheel(steerY = 0) {
+    const wg = new THREE.Group();
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.068, 0.068, 0.064, 24), tireMat);
+    tire.rotation.x = Math.PI / 2;
+    tire.castShadow = true;
+    tire.receiveShadow = true;
+    wg.add(tire);
+
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.066, 16), rimMat);
+    rim.rotation.x = Math.PI / 2;
+    wg.add(rim);
+
+    wg.rotation.y = steerY;
+    return wg;
+  }
+
+  // 4 chunky wheels (front-left, rear-left, front-right steered slightly, rear-right)
+  const wFL = createRoverWheel(0.04);
+  wFL.position.set(-0.115, 0.068, -0.125);
+  roverGroup.add(wFL);
+
+  const wRL = createRoverWheel(0.0);
+  wRL.position.set(0.115, 0.068, -0.132);
+  roverGroup.add(wRL);
+
+  const wFR = createRoverWheel(-0.22); // visibly steered outward on the right in Frame 4
+  wFR.position.set(-0.105, 0.068, 0.125);
+  roverGroup.add(wFR);
+
+  const wRR = createRoverWheel(0.0);
+  wRR.position.set(0.115, 0.068, 0.125);
+  roverGroup.add(wRR);
+
+  // Silver coil-over suspension shocks behind front wheels
+  [-0.085, 0.085].forEach((zPos) => {
+    const shock = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.085, 10), springMat);
+    shock.position.set(-0.095, 0.115, zPos);
+    shock.rotation.x = zPos < 0 ? 0.12 : -0.12;
+    roverGroup.add(shock);
+
+    // Lower suspension arm
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.016, 0.08), rimMat);
+    arm.position.set(-0.105, 0.065, zPos * 1.1);
+    roverGroup.add(arm);
+  });
+
+  // Lower dark grey front chassis box
+  const lowerBox = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.105, 0.145), darkChassisMat);
+  lowerBox.position.set(0.0, 0.108, 0.0);
+  lowerBox.castShadow = true;
+  lowerBox.receiveShadow = true;
+  roverGroup.add(lowerBox);
+
+  // Two small metallic square/round sensors on the upper front of the dark box
+  [-0.045, 0.045].forEach((zPos) => {
+    const port = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.018, 0.018), springMat);
+    port.position.set(-0.121, 0.138, zPos);
+    roverGroup.add(port);
+  });
+
+  // Upper light-grey hood shell
+  const upperHood = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.055, 0.158), lightHoodMat);
+  upperHood.position.set(0.0, 0.188, 0.0);
+  upperHood.castShadow = true;
+  roverGroup.add(upperHood);
+
+  // Flared left-side skirt/fender panel (visible on left side of rover in Frame 4)
+  const leftSkirt = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.052, 0.035), lightHoodMat);
+  leftSkirt.position.set(0.01, 0.182, -0.092);
+  leftSkirt.rotation.x = 0.25;
+  roverGroup.add(leftSkirt);
+
+  // Top bevelled silver-grey roof plate
+  const topRoof = new THREE.Mesh(new THREE.BoxGeometry(0.265, 0.016, 0.175), topPlateMat);
+  topRoof.position.set(0.0, 0.222, -0.005);
+  roverGroup.add(topRoof);
+
+  // Central round black camera hole on upper front hood
+  const camHole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.01, 16), lensMat);
+  camHole.rotation.z = Math.PI / 2;
+  camHole.position.set(-0.123, 0.19, 0.004);
+  roverGroup.add(camHole);
+
+  // Small black LiDAR / antenna turret on top-left-rear
+  const lidarTurret = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.048, 12), rimMat);
+  lidarTurret.position.set(0.04, 0.252, -0.055);
+  roverGroup.add(lidarTurret);
+
+  // Place rover in front of the left post of the recycling bin, overlapping obstacle {x: 1.8, y: -0.15, r: 0.2}
+  roverGroup.position.copy(simToThree(1.66, -0.01, 0));
+  roverGroup.rotation.y = 0.10; // angled slightly toward the robot
+}
+buildStationaryRover();
+
+// --- Helper for Building Realistic Parked Scooters & Shared Bikes ---
+const darkTireMat = new THREE.MeshStandardMaterial({ color: 0x1e2024, roughness: 0.78 });
+const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x26292e, roughness: 0.5, metalness: 0.4 });
+const chromeMat = new THREE.MeshStandardMaterial({ color: 0xcfd4da, roughness: 0.25, metalness: 0.8 });
+const yellowBikeMat = new THREE.MeshStandardMaterial({ color: 0xe3a41e, roughness: 0.42, metalness: 0.1 });
+
+// 1. White / Mint-Green Electric Scooter (Foreground right in Frames 1 & 2)
+function buildMintScooter() {
+  const sg = new THREE.Group();
+  const mintMat = new THREE.MeshStandardMaterial({ color: 0xbac8b6, roughness: 0.42 });
+  const creamMat = new THREE.MeshStandardMaterial({ color: 0xd8d6cb, roughness: 0.48 });
+  const seatBrownMat = new THREE.MeshStandardMaterial({ color: 0x6e5849, roughness: 0.65 });
+  const orangeReflMat = new THREE.MeshStandardMaterial({ color: 0xe87d28, roughness: 0.3, emissive: 0x331500 });
+
+  // Local coordinates: -X is front, +X is rear
+  // Front wheel (radius 0.19m)
+  const fwGroup = new THREE.Group();
+  fwGroup.position.set(-0.42, 0.19, 0);
+  fwGroup.rotation.y = -0.18; // slightly turned toward camera
+  const fTire = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.046, 14, 28), darkTireMat);
+  fTire.castShadow = true;
+  fwGroup.add(fTire);
+  const fHub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.05, 12), darkMetalMat);
+  fHub.rotation.x = Math.PI / 2;
+  fwGroup.add(fHub);
+  for (let i = 0; i < 6; i++) {
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.018, 0.025), darkMetalMat);
+    spoke.rotation.z = (i / 6) * Math.PI;
+    fwGroup.add(spoke);
+  }
+  // Rounded mint-green front fender
+  const fenderGeo = new THREE.SphereGeometry(0.195, 16, 12, 0, Math.PI * 1.15, 0, Math.PI * 0.55);
+  const fender = new THREE.Mesh(fenderGeo, mintMat);
+  fender.rotation.z = 0.35;
+  fender.scale.set(1.0, 1.0, 0.62);
+  fender.position.set(-0.01, 0.03, 0);
+  fwGroup.add(fender);
+
+  // Front fork legs + orange side reflectors (prominent in Frame 2!)
+  [-0.065, 0.065].forEach((zOff) => {
+    const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.38, 10), darkMetalMat);
+    fork.position.set(0.02, 0.14, zOff);
+    fork.rotation.z = -0.22;
+    fwGroup.add(fork);
+
+    const refl = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.055, 0.008), orangeReflMat);
+    refl.position.set(0.01, 0.11, zOff + (zOff > 0 ? 0.016 : -0.016));
+    refl.rotation.z = -0.22;
+    fwGroup.add(refl);
+  });
+
+  // Steering stem & cream perforated front basket
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.032, 0.52, 12), creamMat);
+  stem.position.set(0.09, 0.45, 0);
+  stem.rotation.z = -0.24;
+  fwGroup.add(stem);
+
+  const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.22, 16), creamMat);
+  basket.scale.set(0.85, 1.0, 1.15);
+  basket.position.set(-0.05, 0.50, 0);
+  basket.rotation.z = -0.12;
+  fwGroup.add(basket);
+  // Dark holes on front basket
+  for (let i = -1; i <= 1; i++) {
+    const hole = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.022, 0.045), darkMetalMat);
+    hole.position.set(-0.18, 0.49, i * 0.065);
+    fwGroup.add(hole);
+  }
+
+  // Handlebars
+  const hbar = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.52, 8), chromeMat);
+  hbar.rotation.x = Math.PI / 2;
+  hbar.position.set(0.14, 0.72, 0);
+  fwGroup.add(hbar);
+  sg.add(fwGroup);
+
+  // Footboard & side body (with small orange emblem on side as in Frame 1)
+  const footboard = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.11, 0.26), creamMat);
+  footboard.position.set(0.02, 0.19, 0);
+  footboard.castShadow = true;
+  sg.add(footboard);
+
+  const emblem = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.05), orangeReflMat);
+  emblem.position.set(0.02, 0.18, -0.132);
+  emblem.rotation.y = Math.PI;
+  sg.add(emblem);
+
+  // Rear wheel & seat
+  const rTire = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.046, 12, 24), darkTireMat);
+  rTire.position.set(0.38, 0.19, 0);
+  sg.add(rTire);
+
+  const seatPost = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 0.32, 10), creamMat);
+  seatPost.position.set(0.22, 0.38, 0);
+  seatPost.rotation.z = -0.15;
+  sg.add(seatPost);
+
+  const seat = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), seatBrownMat);
+  seat.scale.set(1.2, 0.48, 0.95);
+  seat.position.set(0.24, 0.54, 0);
+  sg.add(seat);
+
+  // Kickstand
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.24, 6), darkMetalMat);
+  stand.position.set(0.12, 0.10, -0.16);
+  stand.rotation.x = 0.45;
+  sg.add(stand);
+
+  // Place so front wheel is at sim (0.93, -0.31)
+  sg.position.copy(simToThree(0.75, -0.52, 0));
+  sg.rotation.y = -0.82; // angled forward-left
+  scene.add(sg);
+}
+buildMintScooter();
+
+// 2. Red & White Electric Scooter (To the right of the recycling bin in Frames 2, 3, 4)
+function buildRedWhiteScooter() {
+  const sg = new THREE.Group();
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xb82428, roughness: 0.35, metalness: 0.15 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xe6e8eb, roughness: 0.4 });
+  const basketMat = new THREE.MeshStandardMaterial({ color: 0x1e2024, roughness: 0.6, wireframe: false });
+
+  // Local: -X is front (facing +simY / left in image)
+  // Front wheel
+  const fw = new THREE.Group();
+  fw.position.set(-0.42, 0.185, 0);
+  const fTire = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.044, 14, 28), darkTireMat);
+  fTire.castShadow = true;
+  fw.add(fTire);
+  for (let i = 0; i < 5; i++) {
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.022, 0.025), darkMetalMat);
+    sp.rotation.z = (i / 5) * Math.PI * 2;
+    fw.add(sp);
+  }
+  // Red front fender
+  const fender = new THREE.Mesh(
+    new THREE.SphereGeometry(0.185, 14, 10, 0, Math.PI, 0, Math.PI * 0.55),
+    redMat
+  );
+  fender.rotation.z = 0.45;
+  fender.scale.set(1.0, 1.0, 0.58);
+  fender.position.set(-0.01, 0.02, 0);
+  fw.add(fender);
+
+  // Fork legs
+  const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.018, 0.38, 10), darkMetalMat);
+  fork.position.set(0.03, 0.15, 0.05);
+  fork.rotation.z = -0.25;
+  fw.add(fork);
+
+  // Black front wire basket
+  const basket = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.20, 0.28), basketMat);
+  basket.position.set(-0.04, 0.52, 0);
+  fw.add(basket);
+
+  // White front shield & white plastic bag draped on stem
+  const shield = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.42, 12), whiteMat);
+  shield.position.set(0.09, 0.36, 0);
+  shield.rotation.z = -0.28;
+  fw.add(shield);
+
+  const whiteBag = new THREE.Mesh(new THREE.DodecahedronGeometry(0.095, 1), whiteMat);
+  whiteBag.scale.set(0.8, 1.4, 0.9);
+  whiteBag.position.set(0.14, 0.44, -0.04);
+  fw.add(whiteBag);
+  sg.add(fw);
+
+  // Footboard & bright red side panel
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.09, 0.24), darkMetalMat);
+  board.position.set(0.02, 0.18, 0);
+  sg.add(board);
+
+  const redSide = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.12, 0.25), redMat);
+  redSide.position.set(0.16, 0.22, 0);
+  redSide.rotation.z = 0.08;
+  sg.add(redSide);
+
+  // Rear wheel
+  const rTire = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.044, 12, 24), darkTireMat);
+  rTire.position.set(0.38, 0.185, 0);
+  sg.add(rTire);
+
+  // High black seat on post
+  const sPost = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.025, 0.36, 8), whiteMat);
+  sPost.position.set(0.24, 0.44, 0);
+  sg.add(sPost);
+
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.09, 0.20), darkMetalMat);
+  seat.position.set(0.24, 0.62, 0);
+  sg.add(seat);
+
+  // Kickstand
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.22, 6), darkMetalMat);
+  stand.position.set(0.26, 0.09, -0.14);
+  stand.rotation.z = 0.25;
+  stand.rotation.x = 0.35;
+  sg.add(stand);
+
+  // Position to the right of the bin, facing +simY (so front wheel is at sim (1.50, -0.60))
+  sg.position.copy(simToThree(1.52, -0.96, 0));
+  sg.rotation.y = -Math.PI / 2 + 0.08;
+  scene.add(sg);
+}
+buildRedWhiteScooter();
+
+// 3. Yellow Shared Bicycle #2 (Parked at curb to the left of the rover, facing camera)
+function buildYellowBike(simX, simY, yawRad) {
+  const bg = new THREE.Group();
+
+  // Front wheel (at -X)
+  const fw = new THREE.Group();
+  fw.position.set(-0.44, 0.27, 0);
+  const fTire = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.028, 12, 32), darkTireMat);
+  fTire.castShadow = true;
+  fw.add(fTire);
+  const fRim = new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.014, 8, 28), yellowBikeMat);
+  fw.add(fRim);
+
+  // Yellow front fender & fork
+  const fender = new THREE.Mesh(
+    new THREE.TorusGeometry(0.265, 0.024, 10, 20, Math.PI * 0.85),
+    yellowBikeMat
+  );
+  fender.rotation.z = 0.35;
+  fw.add(fender);
+
+  const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.018, 0.42, 8), yellowBikeMat);
+  fork.position.set(0.05, 0.16, 0);
+  fork.rotation.z = -0.22;
+  fw.add(fork);
+
+  // Yellow front basket
+  const basket = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.26), yellowBikeMat);
+  basket.position.set(-0.02, 0.44, 0);
+  fw.add(basket);
+
+  // Handlebars
+  const hbar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.48, 8), darkMetalMat);
+  hbar.rotation.x = Math.PI / 2;
+  hbar.position.set(0.10, 0.58, 0);
+  fw.add(hbar);
+  bg.add(fw);
+
+  // Frame tube
+  const frameTube = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.68, 10), yellowBikeMat);
+  frameTube.position.set(-0.05, 0.36, 0);
+  frameTube.rotation.z = 1.15;
+  bg.add(frameTube);
+
+  // Rear wheel & saddle
+  const rTire = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.028, 12, 28), darkTireMat);
+  rTire.position.set(0.42, 0.27, 0);
+  bg.add(rTire);
+  const rRim = new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.016, 8, 28), yellowBikeMat);
+  rRim.position.set(0.42, 0.27, 0);
+  bg.add(rRim);
+
+  const saddle = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 8), darkMetalMat);
+  saddle.scale.set(1.3, 0.45, 0.85);
+  saddle.position.set(0.22, 0.68, 0);
+  bg.add(saddle);
+
+  // Kickstand
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.30, 6), darkMetalMat);
+  stand.position.set(0.15, 0.13, 0.12);
+  stand.rotation.x = -0.42;
+  bg.add(stand);
+
+  bg.position.copy(simToThree(simX, simY, 0));
+  bg.rotation.y = yawRad;
+  scene.add(bg);
+}
+
+// Yellow Bike #2 at the curb (left of rover, visible in Frames 1, 2, 3, and top-left of Frame 4)
+buildYellowBike(1.74, 0.52, -0.08);
+// Yellow Bike #1 in foreground-left of Frame 1 (angled sideways)
+buildYellowBike(0.86, 1.02, -1.25);
+
+// 4. Black Electric Moped/Scooter (Parked to the left of Yellow Bike #2 in Frames 1 & 2)
+function buildBlackMoped() {
+  const mg = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x24272c, roughness: 0.48, metalness: 0.2 });
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0xd0d8e0, roughness: 0.5 });
+  const tailLightMat = new THREE.MeshStandardMaterial({ color: 0xb82222, emissive: 0x330505, roughness: 0.3 });
+
+  // Rear wheel facing us (-X)
+  const rTire = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.095, 20), darkTireMat);
+  rTire.rotation.x = Math.PI / 2;
+  rTire.position.set(-0.32, 0.17, 0);
+  rTire.castShadow = true;
+  mg.add(rTire);
+
+  // Rear fender + license plate
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.09, 0.14), plateMat);
+  plate.position.set(-0.46, 0.28, 0);
+  plate.rotation.z = -0.25;
+  mg.add(plate);
+
+  // Rear body & taillight
+  const rearBody = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.26, 0.28), bodyMat);
+  rearBody.position.set(-0.18, 0.42, 0);
+  rearBody.castShadow = true;
+  mg.add(rearBody);
+
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.16), tailLightMat);
+  tail.position.set(-0.42, 0.46, 0);
+  mg.add(tail);
+
+  // Backrest / top box & handlebars
+  const topBox = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.24), bodyMat);
+  topBox.position.set(-0.34, 0.62, 0);
+  mg.add(topBox);
+
+  const frontCol = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.58, 10), bodyMat);
+  frontCol.position.set(0.26, 0.48, 0);
+  frontCol.rotation.z = 0.22;
+  mg.add(frontCol);
+
+  const hbar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.56, 8), bodyMat);
+  hbar.rotation.x = Math.PI / 2;
+  hbar.position.set(0.20, 0.76, 0);
+  mg.add(hbar);
+
+  mg.position.copy(simToThree(1.78, 1.02, 0));
+  mg.rotation.y = 0.18;
+  scene.add(mg);
+}
+buildBlackMoped();
+
+// 5. Cyan & White Bicycles + Walking Pedestrians on Far Left of Frame 1
+const cyanBikeMat = new THREE.MeshStandardMaterial({ color: 0x388890, roughness: 0.45 });
+const cyanBike = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.025, 10, 24), darkTireMat);
+cyanBike.position.copy(simToThree(1.45, 1.32, 0.26));
+cyanBike.rotation.y = 0.5;
+scene.add(cyanBike);
+const cyanFrame = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.65, 8), cyanBikeMat);
+cyanFrame.position.copy(simToThree(1.42, 1.48, 0.42));
+cyanFrame.rotation.x = 0.9;
+scene.add(cyanFrame);
+
+const pedGroup1 = new THREE.Group();
+const pedGroup2 = new THREE.Group();
+scene.add(pedGroup1);
+scene.add(pedGroup2);
+
+function populatePedestrian(pg, scale = 1.0) {
+  const jacketMat = new THREE.MeshStandardMaterial({ color: 0xc8bfa8, roughness: 0.75 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: 0x22252b, roughness: 0.8 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x1c1a18, roughness: 0.85 });
+
+  // Legs
+  const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.76, 10), pantsMat);
+  legL.position.set(-0.06, 0.38, -0.07);
+  legL.rotation.z = 0.12;
+  pg.add(legL);
+
+  const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.76, 10), pantsMat);
+  legR.position.set(0.06, 0.38, 0.07);
+  legR.rotation.z = -0.10;
+  pg.add(legR);
+
+  // Cream winter jacket torso
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.56, 12), jacketMat);
+  torso.position.set(0, 0.98, 0);
+  pg.add(torso);
+
+  // Head & hair
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 10), hairMat);
+  head.position.set(0, 1.36, 0);
+  pg.add(head);
+
+  pg.scale.setScalar(scale);
+}
+populatePedestrian(pedGroup1, 1.0);
+populatePedestrian(pedGroup2, 0.94);
+
+// --- Delivery Robot Model (for cam=chase) ---
+const deliveryRobot = new THREE.Group();
+function buildDeliveryRobot() {
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf2f4f7, roughness: 0.35 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x353940, roughness: 0.6 });
+  const flagMat = new THREE.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0x441000, roughness: 0.4, side: THREE.DoubleSide });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.44, 0.50), bodyMat);
+  body.position.y = 0.30;
+  body.castShadow = true;
+  deliveryRobot.add(body);
+
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.06, 0.48), trimMat);
+  lid.position.y = 0.54;
+  deliveryRobot.add(lid);
+
+  // 6 wheels
+  [-0.22, 0.0, 0.22].forEach((xOff) => {
+    [-0.26, 0.26].forEach((zOff) => {
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.05, 16), darkTireMat);
+      w.rotation.x = Math.PI / 2;
+      w.position.set(xOff, 0.085, zOff);
+      deliveryRobot.add(w);
+    });
+  });
+
+  // Orange safety flag
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.85, 6), trimMat);
+  pole.position.set(-0.26, 0.95, 0.18);
+  deliveryRobot.add(pole);
+
+  const flag = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(-0.22, -0.07, 0),
+    new THREE.Vector3(0, -0.15, 0)
+  ]), flagMat);
+  flag.geometry.computeVertexNormals();
+  flag.position.set(-0.26, 1.36, 0.18);
+  deliveryRobot.add(flag);
+}
+buildDeliveryRobot();
+scene.add(deliveryRobot);
+
+// --- Trajectory Interpolation + Video-Calibrated Curving Path Correction ---
+// As diagnosed in the prompt, the robot curved right across the concrete plaza toward the
+// row of parked scooters & trash bins, while the IMU yaw log was flat/corrupted.
+// This smooth correction spline aligns all 4 reference timestamps while converging to (0,0)
+// at the collision obstacle {'x': 1.8, 'y': -0.15, 'r': 0.2}.
+const PATH_CORRECTION_KNOTS = [
+  { t: 0.000, dy: 0.38, dyaw: 0.52 },
+  { t: 0.338, dy: 0.30, dyaw: 0.42 },  // Frame 1
+  { t: 0.938, dy: 0.08, dyaw: 0.035 }, // Frame 2
+  { t: 1.338, dy: 0.05, dyaw: -0.33 }, // Frame 3
+  { t: 1.738, dy: 0.00, dyaw: 0.015 }, // Frame 4
+  { t: 2.040, dy: -0.02, dyaw: 0.00 },
+  { t: 2.720, dy: -0.02, dyaw: 0.00 }
+];
+
+function sampleCorrection(t) {
+  const knots = PATH_CORRECTION_KNOTS;
+  if (t <= knots[0].t) return { dy: knots[0].dy, dyaw: knots[0].dyaw };
+  if (t >= knots[knots.length - 1].t) {
+    const last = knots[knots.length - 1];
+    return { dy: last.dy, dyaw: last.dyaw };
+  }
+  for (let i = 0; i < knots.length - 1; i++) {
+    const k0 = knots[i];
+    const k1 = knots[i + 1];
+    if (t >= k0.t && t <= k1.t) {
+      const u = (t - k0.t) / (k1.t - k0.t);
+      // Smooth Hermite interpolation
+      const s = u * u * (3 - 2 * u);
+      return {
+        dy: k0.dy + (k1.dy - k0.dy) * s,
+        dyaw: k0.dyaw + (k1.dyaw - k0.dyaw) * s
+      };
+    }
+  }
+  return { dy: 0, dyaw: 0 };
+}
+
+let trajData = DEFAULT_TRAJ;
+window.duration = DEFAULT_TRAJ.frames[DEFAULT_TRAJ.frames.length - 1].t;
+
+function sampleTrajectory(t) {
+  const frames = trajData.frames;
+  if (!frames || frames.length === 0) return { x: 0, y: 0, z: 0.15, yaw: 0 };
+  if (t <= frames[0].t) return { ...frames[0] };
+  if (t >= frames[frames.length - 1].t) return { ...frames[frames.length - 1] };
+
+  for (let i = 0; i < frames.length - 1; i++) {
+    const f0 = frames[i];
+    const f1 = frames[i + 1];
+    if (t >= f0.t && t <= f1.t) {
+      const a = (t - f0.t) / Math.max(1e-6, f1.t - f0.t);
+      return {
+        t,
+        x: f0.x + (f1.x - f0.x) * a,
+        y: f0.y + (f1.y - f0.y) * a,
+        z: (f0.z ?? 0.15) + ((f1.z ?? 0.15) - (f0.z ?? 0.15)) * a,
+        yaw: f0.yaw + (f1.yaw - f0.yaw) * a
+      };
+    }
+  }
+  return { ...frames[frames.length - 1] };
+}
+
+let currentTime = 0.0;
+
+// --- Synchronous Seek & Render Contract ---
+window.seek = function(t) {
+  const clampedT = Math.max(0, Math.min(window.duration || 2.72, t));
+  currentTime = clampedT;
+
+  const rawPose = sampleTrajectory(clampedT);
+  const corr = sampleCorrection(clampedT);
+
+  const simX = rawPose.x;
+  const simY = rawPose.y + corr.dy;
+  const simZ = rawPose.z ?? 0.15;
+  const simYaw = rawPose.yaw + corr.dyaw;
+
+  // Pose delivery robot model
+  deliveryRobot.position.copy(simToThree(simX, simY, 0));
+  deliveryRobot.rotation.y = simYaw;
+  deliveryRobot.visible = (camMode === 'chase');
+
+  // Pose robot camera (z_frame + 0.09m matches exact camera optical height 0.24m)
+  const camHeight = simZ + 0.09;
+  robotCam.position.copy(simToThree(simX, simY, camHeight));
+  robotCam.rotation.y = -Math.PI / 2 + simYaw;
+  robotCam.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+  robotCam.rotation.z = -0.022; // Slight natural camera roll matching curb slope in frames
+
+  // Pose chase camera (3 m behind and 1.4 m above the robot)
+  const backX = simX - Math.cos(simYaw) * 2.8;
+  const backY = simY - Math.sin(simYaw) * 2.8;
+  chaseCam.position.copy(simToThree(backX, backY, 1.45));
+  chaseCam.lookAt(simToThree(simX + Math.cos(simYaw) * 0.8, simY + Math.sin(simYaw) * 0.8, 0.35));
+
+  // Animate walking pedestrians on the left (visible in Frame 1)
+  pedGroup1.position.copy(simToThree(1.02 - clampedT * 0.35, 1.46 + clampedT * 0.42, 0));
+  pedGroup1.rotation.y = 0.6;
+  pedGroup2.position.copy(simToThree(1.42 - clampedT * 0.28, 1.45 + clampedT * 0.35, 0));
+  pedGroup2.rotation.y = 0.5;
+
+  // Update post-processing uniforms and active camera
+  renderPass.camera = (camMode === 'chase') ? chaseCam : robotCam;
+  lookPass.uniforms.uTime.value = clampedT;
+  lookPass.uniforms.uIsRobotCam.value = (camMode === 'chase') ? 0.0 : 1.0;
+
+  // Update UI if visible
+  if (!isCapture) {
+    document.getElementById('scrubber').value = clampedT;
+    document.getElementById('timeLabel').textContent = clampedT.toFixed(2) + 's';
+  }
+
+  composer.render();
+};
+
+// --- UI Controls ---
+let isPlaying = !isCapture;
+const playBtn = document.getElementById('playBtn');
+const scrubber = document.getElementById('scrubber');
+const camBtn = document.getElementById('camBtn');
+const pitchSlider = document.getElementById('pitchSlider');
+
+playBtn.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+});
+
+scrubber.addEventListener('input', (e) => {
+  isPlaying = false;
+  playBtn.textContent = 'Play';
+  window.seek(parseFloat(e.target.value));
+});
+
+camBtn.addEventListener('click', () => {
+  camMode = (camMode === 'robot') ? 'chase' : 'robot';
+  camBtn.textContent = `Cam: ${camMode === 'robot' ? 'Robot' : 'Chase'}`;
+  window.seek(currentTime);
+});
+
+pitchSlider.addEventListener('input', (e) => {
+  pitchDeg = parseFloat(e.target.value);
+  window.seek(currentTime);
+});
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  robotCam.aspect = w / h;
+  robotCam.updateProjectionMatrix();
+  chaseCam.aspect = w / h;
+  chaseCam.updateProjectionMatrix();
+  window.seek(currentTime);
+});
+
+// --- Initialization & Animation Loop ---
+async function init() {
+  if (trajUrl) {
+    try {
+      const resp = await fetch(trajUrl);
+      if (resp.ok) {
+        trajData = await resp.json();
+      }
+    } catch (e) {
+      console.warn('Using embedded fallback trajectory:', e);
+    }
+  }
+
+  if (trajData.frames && trajData.frames.length > 0) {
+    window.duration = trajData.frames[trajData.frames.length - 1].t;
+    scrubber.max = window.duration;
+  }
+
+  // Update obstacle position if overridden in trajectory JSON
+  if (trajData.obstacle && typeof trajData.obstacle.x === 'number') {
+    const ox = trajData.obstacle.x;
+    const oy = trajData.obstacle.y;
+    roverGroup.position.copy(simToThree(ox - 0.14, oy + 0.14, 0));
+  }
+
+  // Render initial frame and mark ready
+  window.seek(0.0);
+  window.__ready = true;
+
+  let lastPerf = performance.now();
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = (now - lastPerf) / 1000;
+    lastPerf = now;
+    if (isPlaying && !isCapture) {
+      let nextT = currentTime + dt;
+      if (nextT > window.duration) nextT = 0;
+      window.seek(nextT);
+    }
+  }
+  if (!isCapture) {
+    requestAnimationFrame(animate);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

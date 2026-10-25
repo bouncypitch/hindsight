@@ -12,3 +12,4 @@ data/public_failures/
 data/coco_samples/*/*.mp4
 data/coco_samples/*/*.npy
 demo_assets/**/variant_tiles/
+.DS_Store

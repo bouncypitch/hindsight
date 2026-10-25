@@ -1,0 +1,122 @@
+{
+ "title": "Hindsight",
+ "scenes": [
+  {
+   "id": "l1",
+   "headline": "Thousands of hours.",
+   "media": [
+    "/demo_assets/failure_wall.mp4"
+   ],
+   "say": "Robot fleets record thousands of hours. Real failures are rare, and no one has time to find them.",
+   "wide": true,
+   "sub": "8 GB \u00b7 788 rides \u00b7 50 hours of public robot video"
+  },
+  {
+   "id": "l2",
+   "headline": "Argon finds the failures.",
+   "media": [
+    "/demo_assets/top4_failures.mp4"
+   ],
+   "say": "Argon reviews it all, and keeps only the failures that matter.",
+   "wide": true,
+   "sub": "100% accuracy, confirmed by a human."
+  },
+  {
+   "id": "l3a",
+   "headline": "Rebuilt from real footage.",
+   "media": [
+    "/demo_assets/coco_09294dbb/coco_real_vs_twin_omni.mp4"
+   ],
+   "labels": [
+    "Real",
+    "Twin"
+   ],
+   "wide": true,
+   "say": "It rebuilds each one as a digital twin, from a few real frames."
+  },
+  {
+   "id": "l3b",
+   "headline": "Then made harder.",
+   "media": [
+    "/demo_assets/coco_09294dbb/whatif/pedestrian_steps_out__omni.mp4#t=4.5",
+    "/demo_assets/coco_09294dbb/whatif/truck_runs_light__omni.mp4#t=3.0"
+   ],
+   "wide": false,
+   "say": "Then it asks: what if someone steps out? What if a truck runs the light?"
+  },
+  {
+   "id": "l4",
+   "headline": "Argon writes the reward for RL.",
+   "media": [
+    "/data/reward_clips/good_indoor_b.mp4",
+    "/demo_assets/141102_tip_over_443s/01_real_failure.mp4"
+   ],
+   "labels": [
+    "Good",
+    "Bad"
+   ],
+   "say": "It writes the reward for reinforcement learning, from good rides and bad ones."
+  },
+  {
+   "id": "l5a",
+   "headline": "RL trains on 40 variants.",
+   "media": [
+    "/demo_assets/rl_10_cropped.mp4"
+   ],
+   "wide": true,
+   "say": "Reinforcement learning retrains the robot on forty variants of the failure.",
+   "sub": "Before: hits the pole. After: steers around it."
+  },
+  {
+   "id": "l5",
+   "headline": "Argon catches it cheating.",
+   "media": [
+    "/demo_assets/hack_freeze.mp4",
+    "/demo_assets/hack_jump.mp4"
+   ],
+   "bigclass": "bad",
+   "say": "When it cheats, parking to avoid a crash, or launching off a curb, Argon catches it, and rewrites the reward.",
+   "sub": "Blocked. Reward rewritten. Trained again.",
+   "labels": [
+    "Parks",
+    "Launches"
+   ]
+  },
+  {
+   "id": "l6",
+   "headline": "Now it doesn't fail.",
+   "media": [
+    "/demo_assets/proof_grid.mp4"
+   ],
+   "say": "Now, indoors and outdoors, the robots that crashed pass safely. Argon approves.",
+   "sub": "Indoors and outdoors. Approved by Argon.",
+   "wide": true,
+   "cols": [
+    "Before",
+    "After"
+   ]
+  },
+  {
+   "id": "l7",
+   "headline": "Safe for every site.",
+   "say": "One update fixed one site but broke another. Argon blocked it, until it passed both.",
+   "verdicts": [
+    [
+     "Blocked",
+     "Fixed one site. Broke another."
+    ],
+    [
+     "Approved",
+     "Retrained. Both sites 100%."
+    ]
+   ]
+  },
+  {
+   "id": "l8",
+   "headline": "Federated Robot Learning",
+   "sub": "Enabled by Argon.",
+   "end": true,
+   "say": "Hindsight. Federated robot learning, enabled by Argon."
+  }
+ ]
+}

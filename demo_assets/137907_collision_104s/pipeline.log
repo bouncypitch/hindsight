@@ -85,3 +85,29 @@
 [14:36:54] Argon: verifying the new policy against the real failure
 [14:38:40]   fixes=False hacking=True ship=False The retrained policy exploits two flaws in the reward function: (1) `hard_contact = collided or (peak_impact > 10.0)` is always triggered because baseline `peak_impact` in the simulator is ~31-33 even without collisions, which completely zeroes out the +80 success reward and +45 progress reward on every episode; (2) facing only negative penalties, the policy learned to creep forward at ~0.24 m/s (just above the `vx < 0.15, cmd_v < 0.2` crawl penalty threshold) so that when it runs into the cylinder late in the episode (at 00:05.750 in the twin), the low-speed contact avoids triggering the simulator's `collided` (-85) and `stalled` (-60) flags, converting a high-penalty crash into a lower-penalty timeout or near-scrape.
 [14:38:40] done
+[15:29:11]   collision at t=8.25s, confidence 0.85: While driving across a flat concrete plaza and curving right toward a row of parked scooters and trash bins, the robot failed to detect a stationary small rover parked in front of a recycling bin and collided with it at t=8.25 s at ~0.7 m/s. The provided IMU log disagrees strongly with the video (showing extreme vertical acceleration spikes such as az_g = -1.901 g while the robot sits motionless on flat pavement), so the video is trusted over the corrupted or mismatched IMU log.
+[15:29:21] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[15:29:25] gen  0  reward   70.44  success 85%  edge_speed 0.59  edge_heading 1°  impact 11
+[15:29:29] gen  1  reward  100.52  success 100%  edge_speed 0.74  edge_heading 1°  impact 12
+[15:29:33] gen  2  reward  104.57  success 100%  edge_speed 0.50  edge_heading 2°  impact 11
+[15:29:37] gen  3  reward  109.53  success 100%  edge_speed 1.11  edge_heading 6°  impact 11
+[15:29:42] gen  4  reward  108.74  success 100%  edge_speed 1.19  edge_heading 9°  impact 11
+[15:29:45] gen  5  reward  108.73  success 100%  edge_speed 1.20  edge_heading 9°  impact 11
+[15:29:50] gen  6  reward  110.14  success 100%  edge_speed 0.88  edge_heading 9°  impact 11
+[15:29:55] gen  7  reward  110.91  success 100%  edge_speed 0.96  edge_heading 11°  impact 11
+[15:30:01] gen  8  reward  109.95  success 100%  edge_speed 0.99  edge_heading 8°  impact 11
+[15:30:06] gen  9  reward  107.78  success 100%  edge_speed 0.82  edge_heading 14°  impact 12
+[15:30:11] gen 10  reward  110.32  success 100%  edge_speed 1.03  edge_heading 11°  impact 11
+[15:30:16] gen 11  reward  108.61  success 100%  edge_speed 0.84  edge_heading 12°  impact 12
+[15:30:20] gen 12  reward  110.16  success 100%  edge_speed 0.91  edge_heading 12°  impact 11
+[15:30:24] gen 13  reward  110.43  success 100%  edge_speed 0.70  edge_heading 3°  impact 11
+[15:30:29] gen 14  reward  111.18  success 100%  edge_speed 0.93  edge_heading 6°  impact 10
+[15:30:33] gen 15  reward  109.46  success 100%  edge_speed 1.17  edge_heading 8°  impact 11
+[15:30:38] gen 16  reward  110.11  success 100%  edge_speed 0.98  edge_heading 11°  impact 11
+[15:30:41] gen 17  reward  108.32  success 100%  edge_speed 1.16  edge_heading 10°  impact 11
+[15:30:46] gen 18  reward  111.39  success 100%  edge_speed 0.94  edge_heading 9°  impact 11
+[15:30:50] gen 19  reward  109.94  success 100%  edge_speed 1.11  edge_heading 8°  impact 11
+[15:30:52]   success 0% -> 100%
+[15:30:52] Argon: verifying the new policy against the real failure
+[15:31:17]   fixes=True hacking=False ship=True 
+[15:31:18] done

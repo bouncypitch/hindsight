@@ -1,0 +1,77 @@
+{
+ "master_eval": {
+  "Berkeley (tall curbs)": {
+   "success": 0.8,
+   "fall": 0.2,
+   "collision_or_near_miss": 0.0,
+   "stall": 0.0
+  },
+  "San Francisco (busy plaza)": {
+   "success": 0.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 1.0,
+   "stall": 0.0
+  },
+  "Hayward (hills, curb climbs)": {
+   "success": 0.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 1.0
+  }
+ },
+ "solo_eval": {
+  "Berkeley (tall curbs)": {
+   "success": 0.8,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 0.2
+  },
+  "San Francisco (busy plaza)": {
+   "success": 1.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 0.0
+  },
+  "Hayward (hills, curb climbs)": {
+   "success": 0.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 1.0
+  }
+ },
+ "joint_eval": {
+  "Berkeley (tall curbs)": {
+   "success": 1.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 0.0
+  },
+  "San Francisco (busy plaza)": {
+   "success": 1.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 0.0
+  },
+  "Hayward (hills, curb climbs)": {
+   "success": 0.0,
+   "fall": 0.0,
+   "collision_or_near_miss": 0.0,
+   "stall": 1.0
+  }
+ },
+ "gate": {
+  "decisions": [
+   {
+    "robot": "robot-B (first try, San Francisco data only)",
+    "accept": false,
+    "reason": "While this update resolves collisions in San Francisco and reduces falls in Berkeley, it increases the stall rate in Berkeley from 0.0 to 0.2, violating the rule against degrading performance or increasing stalls in other cities."
+   },
+   {
+    "robot": "robot-B (retrained with Berkeley's scenarios)",
+    "accept": true,
+    "reason": "This update completely eliminates collisions in San Francisco (100% success) and also eliminates falls in Berkeley (100% success) without introducing new safety issues or stalls in any city."
+   }
+  ],
+  "summary": "Rejected robot-B's first update because it introduced stalls in Berkeley, and accepted the retrained robot-B update which achieved 100% success in both San Francisco and Berkeley without regression in Hayward."
+ }
+}

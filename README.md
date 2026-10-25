@@ -9,24 +9,34 @@
 Built in one day at the Gemini 4 Argon SF Hackathon (Google DeepMind x Cerebral Valley, 2026-10-25).
 
 ## The proof
-A real robot clipped a barstool leg and flipped onto its side (public FrodoBots-Mini-4K footage). Hindsight:
+Two real failures from public FrodoBots-Mini-4K footage, one indoor and one outdoor, both fixed and approved by Argon:
+- **Indoor:** a robot clipped a barstool leg and flipped onto its side.
+- **Outdoor:** a robot drove into another robot parked among bikes on a crowded sidewalk.
+
+For the barstool case, Hindsight:
 
 1. **Confirmed** the failure from video + IMU (Argon, with visual evidence and timestamps).
 2. **Rebuilt** it as a MuJoCo twin that reproduces the crash (original behavior: 3.5 cm clearance, collision).
 3. **Retrained** the policy with an Argon-written reward on 40 Argon-planned variants: **success 0% → 100%, collisions 100% → 0%, at least 25 cm clearance in every variant.**
 4. **Verified:** Argon reviewed the real clip and the old and new twins, then approved: *"smoothly steers left to give the obstacle a wide berth… passes with 0.307 m clearance… realigns without oscillation, stalling, or collision."*
 
+The sidewalk case went the same way: 0% → 100% success on 40 variants, 0.27 m clearance in the original scenario, approved by Argon.
+
 Before approving, Argon blocked 7+ retrained policies that gamed the reward (freezing then creeping, side-scraping, speeding). Along the way, Argon and the managed agent exposed three bugs in our own simulator.
 
 ## Results
 | | |
 |---|---|
+| Public data downloaded and scanned | 8.1 GB · 788 rides · ~50 h of robot video from 6 countries (FrodoBots-7K + Mini-4K) |
 | Failure mining on real public video | 130 physics candidates → 44 confirmed by Argon → **15/15 correct on blind human review** (a naive sensor+cheap-model approach scored 0/13 when hand-checked) |
 | Argon vs Gemini 3.8 Flash (same strict prompt) | on the 15 human-verified failures, Flash missed 3 (80% recall); Argon missed none (caveat: these positives came from Argon's own detections) |
-| End-to-end fix, barstool case | 0% → 100% success on 40 twin variants; Argon: ship |
+| End-to-end fix, indoor (barstool) | 0% → 100% success on 40 twin variants, ≥ 0.25 m clearance; Argon: ship |
+| End-to-end fix, outdoor (sidewalk) | 0% → 100% success on 40 twin variants, 0.27 m clearance; Argon: ship |
+| Regression caught, then fixed | Argon blocked an update that fixed San Francisco but raised Berkeley's stalls 0% → 20%; retrained with Berkeley's scenarios, it passed both (SF 0% → 100%, Berkeley 80% → 100%) and Argon approved it |
 | Managed agent (Antigravity sandbox) | 42 min autonomous run: collisions 97.5% → 2.5%, found a spawn-height bug that corrupted every impact reading |
 | Data uploaded (measured on Mini-4K) | everything: 3.57 GB (7.7 h) → only failures: 68 MB (53× less) → only policy updates: ~4.6 KB (**~770,000× less**) |
 | Federated fleet (4 simulated cities) | Argon accepted the update that took one city's curb falls 60% → 0%, and blocked updates that would hurt other cities |
+| Simulator bugs surfaced by Argon / the managed agent | collision check missed side-scrapes · chase camera hid clearance · spawn drop faked a 3 g impact in every episode (all fixed) |
 
 ## How it works
 ```
@@ -61,7 +71,10 @@ fleet video ─► physics triggers ─► Argon: confirm ─► Argon: diagnose
 | `curbsense/fleet.py` | federated rounds with the Argon fleet gate |
 | `curbsense/sim/` | MuJoCo world (curb drop/climb, slope, obstacle, pedestrian), policy, rollout |
 | `curbsense/viz/` | Argon-built Three.js twins, real-clip scene matching, what-ifs, Omni restyle |
-| `app/site/` | demo website · `app/live.html` + `app/live_server.py` live control room · `app/video/` narrated videos |
+| `docs/` | the demo website (GitHub Pages) |
+| `app/live.html` + `app/live_server.py` | live control room that runs Argon on a chosen failure |
+| `app/video/` | the 1-minute film: `script_launch.json`, `player_launch.html`, ElevenLabs narration (`tts.py`), recorder (`render.py`) |
+| `scripts/` | proofs and visuals: `proof_barstool.py`, `variant_grid40.py`, `fleet_fix.py`, sweeps |
 
 Note: the Python package is still named `curbsense` (the project's working name).
 

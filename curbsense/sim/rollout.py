@@ -179,6 +179,12 @@ def _camera(model, view: str):
     cam.type = mujoco.mjtCamera.mjCAMERA_TRACKING
     cam.trackbodyid = model.body("robot").id
     cam.distance, cam.elevation, cam.azimuth = 2.6, -18.0, 215.0
+    if view == "scene":  # fixed, angled camera on the obstacle: shows the robot's path around it
+        g = model.geom("obstacle")
+        cam.type = mujoco.mjtCamera.mjCAMERA_FREE
+        cam.lookat[:] = [g.pos[0] - 0.4, g.pos[1], 0.2]
+        cam.distance, cam.elevation, cam.azimuth = 3.3, -38.0, 230.0
+        return cam
     if view == "top":  # overhead: makes clearance to obstacles unambiguous for a reviewer
         cam.distance, cam.elevation, cam.azimuth = 3.2, -89.0, 90.0
     return cam
