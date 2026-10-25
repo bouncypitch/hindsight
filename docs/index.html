@@ -22,13 +22,13 @@
   .hot { background: linear-gradient(100deg, var(--bad1), var(--bad2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   header { text-align: center; padding-block: 96px 56px; }
   .eyebrow { color: var(--mute); font-size: 17px; font-weight: 500; letter-spacing: .01em; }
-  h1 { font-size: clamp(64px, 13vw, 150px); line-height: .95; letter-spacing: -.05em; margin: 14px 0 12px; font-weight: 800; }
+  h1 { font-size: clamp(56px, 11vw, 130px); line-height: 1.08; padding-bottom: .1em; letter-spacing: -.05em; margin: 14px 0 12px; font-weight: 800; }
   .tag { font-size: clamp(24px, 3.6vw, 40px); font-weight: 600; letter-spacing: -.02em; margin: 0 0 44px; text-wrap: balance; }
   video { width: 100%; max-width: 100%; display: block; border-radius: 22px; background: #000; }
   section { text-align: center; padding-block: 88px; border-top: 1px solid var(--line); }
   h2 { font-size: clamp(40px, 7vw, 84px); line-height: 1; letter-spacing: -.045em; margin: 0 0 14px; font-weight: 700; text-wrap: balance; }
   .line { color: var(--mute); font-size: clamp(19px, 2.4vw, 26px); font-weight: 500; letter-spacing: -.01em; margin: 0 auto 40px; max-width: 760px; text-wrap: balance; }
-  .num { font-size: clamp(64px, 12vw, 140px); font-weight: 800; letter-spacing: -.05em; line-height: 1; margin: 8px 0 36px; }
+  .num { font-size: clamp(64px, 12vw, 140px); font-weight: 800; letter-spacing: -.05em; line-height: 1.1; padding-bottom: .08em; margin: 8px 0 36px; }
   .row { display: grid; gap: 14px; }
   .r2 { grid-template-columns: 1fr 1fr; } .r3 { grid-template-columns: repeat(3, 1fr); }
   .r3 video { aspect-ratio: 4 / 3; object-fit: cover; }
@@ -36,6 +36,13 @@
   .cell { position: relative; min-width: 0; }
   .chip { position: absolute; left: 14px; top: 12px; font-size: 15px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,.6); }
   .chip.good { color: var(--g1); } .chip.bad { color: var(--bad1); }
+  .verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; text-align: left; }
+  .verdict { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px 28px; }
+  .verdict .v { font-size: clamp(36px, 5vw, 56px); font-weight: 800; letter-spacing: -.04em; line-height: 1.1; padding-bottom: .05em; }
+  .verdict.bad .v { background: linear-gradient(100deg, var(--bad1), var(--bad2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .verdict.good .v { background: linear-gradient(100deg, var(--g1), var(--g2) 55%, var(--g3)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .verdict .k { color: var(--mute); font-size: 18px; margin-top: 8px; }
+  @media (max-width: 640px) { .verdicts { grid-template-columns: 1fr; } }
   .missing { display: none !important; }
   footer { text-align: center; color: var(--mute); font-size: 15px; padding-block: 56px 80px; border-top: 1px solid var(--line); }
   footer a { color: var(--g2); text-decoration: none; }
@@ -56,14 +63,19 @@
 <section style="border-top:0;padding-top:24px">
   <h2>Robot fleets record thousands of hours.</h2>
   <p class="line">Real failures are rare. Engineers don't have time to find them.</p>
-  <video src="media/fleet_wall.mp4" autoplay muted loop playsinline></video>
+  <div class="row r3" style="margin-bottom:28px">
+    <div><div class="num grad" style="margin:0;font-size:clamp(40px,6vw,72px)">8 GB</div><p class="line" style="margin:0">of public robot data</p></div>
+    <div><div class="num grad" style="margin:0;font-size:clamp(40px,6vw,72px)">788</div><p class="line" style="margin:0">real rides</p></div>
+    <div><div class="num grad" style="margin:0;font-size:clamp(40px,6vw,72px)">50 h</div><p class="line" style="margin:0">of robot video, 6 countries</p></div>
+  </div>
+  <video src="media/failure_wall.mp4" autoplay muted loop playsinline></video>
 </section>
 
 <section>
   <h2>Argon finds the failures that matter.</h2>
   <p class="line">It watches every clip and keeps only what it can see go wrong.</p>
-  <video src="media/failure_wall.mp4" autoplay muted loop playsinline></video>
-  <div class="num grad" style="margin:36px 0 0">15 / 15</div>
+  <video src="media/top4_failures.mp4" autoplay muted loop playsinline></video>
+  <div class="num grad" style="margin:36px 0 0">100% accuracy</div>
   <p class="line" style="margin-bottom:0">confirmed by a human</p>
 </section>
 
@@ -78,7 +90,7 @@
 </section>
 
 <section>
-  <h2>Argon writes the reward.</h2>
+  <h2>Argon writes the reward for RL.</h2>
   <p class="line">By watching good rides and bad ones.</p>
   <div class="row r2">
     <div class="cell"><video src="media/good_ride.mp4" autoplay muted loop playsinline></video><span class="chip good">Good</span></div>
@@ -90,7 +102,8 @@
   <h2>Reinforcement learning trains a better policy.</h2>
   <p class="line">When it games the reward, Argon catches it, rewrites the reward and trains again. On its own.</p>
   <div class="num hot">Blocked</div>
-  <video src="media/barstool_twin_old_omni.mp4" autoplay muted loop playsinline></video>
+  <video src="media/hack_freeze.mp4" autoplay muted loop playsinline></video>
+  <p class="line" style="margin:22px auto 0"><b style="color:var(--ink)">The hack:</b> the robot learned to park in front of the chair leg until time ran out. No crash, so no penalty, but it never got anywhere. Argon spotted it, rewrote the reward, and training started again.</p>
 </section>
 
 <section>
@@ -98,15 +111,20 @@
   <p class="line">Indoors and outdoors. In every harder variant. Approved by Argon.</p>
   <div class="num grad">0% → 100%</div>
   <div class="row r2">
-    <div class="cell"><video src="media/barstool_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Indoor</span></div>
-    <div class="cell"><video src="media/sidewalk_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Outdoor</span></div>
+    <div class="cell"><video src="media/barstool_twin_old_omni.mp4" autoplay muted loop playsinline></video><span class="chip bad">Indoor · before</span></div>
+    <div class="cell"><video src="media/barstool_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Indoor · after</span></div>
+    <div class="cell"><video src="media/sidewalk_twin_old_omni.mp4" autoplay muted loop playsinline></video><span class="chip bad">Outdoor · before</span></div>
+    <div class="cell"><video src="media/sidewalk_twin_new_omni.mp4" autoplay muted loop playsinline></video><span class="chip good">Outdoor · after</span></div>
   </div>
 </section>
 
 <section>
   <h2>Checked against every site before it ships.</h2>
-  <p class="line">Robots share a tiny update, not their video. A human approves every deploy.</p>
-  <div class="num grad">~100 bytes</div>
+  <p class="line">Argon tests each update on every other site and blocks regressions. A human approves every deploy.</p>
+  <div class="verdicts">
+    <div class="verdict bad"><div class="v">Blocked</div><div class="k">Fixed San Francisco. Broke Berkeley:<br>stalls went from 0% to 20%.</div></div>
+    <div class="verdict good"><div class="v">Approved</div><div class="k">Retrained with Berkeley's scenarios.<br>San Francisco 0% → 100%. Berkeley 80% → 100%.</div></div>
+  </div>
 </section>
 
 <section>
