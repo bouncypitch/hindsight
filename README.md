@@ -1,5 +1,10 @@
 # Federated Robot Learning - Enabled by Argon
 
+
+https://github.com/user-attachments/assets/a595df6e-e516-4359-8197-53674437900a
+
+
+
 **Hindsight.** Every robot failure makes the fleet smarter. Federated robot learning, enabled by Gemini 4 Argon.
 
 **Robots that learn from their own failures.** Hindsight watches real robot footage (indoors and outdoors), finds the moments a robot went wrong, rebuilds each one as a physics digital twin that reproduces the failure, retrains the robot with reinforcement learning, and only ships the fix once **Gemini 4 Argon** verifies it. Robots then share what they learned as tiny policy updates instead of hours of video.
