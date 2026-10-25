@@ -78,7 +78,7 @@ fleet video ─► physics triggers ─► Argon: confirm ─► Argon: diagnose
 | `curbsense/viz/` | Argon-built Three.js twins, real-clip scene matching, what-ifs, Omni restyle |
 | `docs/` | the demo website (GitHub Pages) |
 | `app/live.html` + `app/live_server.py` | live control room that runs Argon on a chosen failure |
-| `app/video/` | the 1-minute film: `script_launch.json`, `player_launch.html`, ElevenLabs narration (`tts.py`), recorder (`render.py`) |
+| `app/video/` | the 1-minute film: `script_site.json`, `player_launch.html`, ElevenLabs narration (`tts.py`), recorder (`render.py`) |
 | `scripts/` | proofs and visuals: `proof_barstool.py`, `variant_grid40.py`, `fleet_fix.py`, sweeps |
 
 Note: the Python package is still named `curbsense` (the project's working name).

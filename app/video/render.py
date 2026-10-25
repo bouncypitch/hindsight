@@ -13,7 +13,7 @@ from playwright.sync_api import sync_playwright
 HERE = Path(__file__).parent
 import os
 PLAYER = os.environ.get("PLAYER", "player.html")
-GAP = 0.9  # seconds of breathing room after each scene's narration (must match player.html)
+GAP = float(os.environ.get("GAP", 0.9))  # seconds of breathing room after each scene's narration (must match player.html)
 
 
 def main(skip: list[str], script_name="script.json", timing_name="timing.json", out_name="curbsense_demo.mp4"):
@@ -31,7 +31,7 @@ def main(skip: list[str], script_name="script.json", timing_name="timing.json", 
                             record_video_size={"width": 1920, "height": 1080})
         page = ctx.new_page()
         t_open = time.time()
-        page.goto(f"http://127.0.0.1:8765/app/video/{PLAYER}?skip={json.dumps(skip)}&script={script_name}&timing={timing_name}")
+        page.goto(f"http://127.0.0.1:8765/app/video/{PLAYER}?skip={json.dumps(skip)}&script={script_name}&timing={timing_name}&gap={GAP}")
         page.wait_for_function("window.__ready === true", timeout=60000)
         page.wait_for_timeout(2500)  # let videos buffer
         lead = time.time() - t_open

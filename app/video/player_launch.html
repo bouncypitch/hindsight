@@ -7,7 +7,7 @@
     font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif; -webkit-font-smoothing:antialiased; }
   .scene { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:44px; padding:80px 110px; opacity:0; transition:opacity .8s ease; }
   .scene.on { opacity:1; }
-  h1 { font-size:112px; font-weight:700; letter-spacing:-.045em; line-height:1; text-align:center; transform:translateY(24px); opacity:0; transition:all 1s cubic-bezier(.2,.7,.2,1) .1s; }
+  h1 { max-width:1700px; font-size:104px; font-weight:700; letter-spacing:-.045em; line-height:1; text-align:center; transform:translateY(24px); opacity:0; transition:all 1s cubic-bezier(.2,.7,.2,1) .1s; }
   .on h1 { transform:none; opacity:1; }
   .sub { font-size:52px; color:var(--mute); font-weight:500; letter-spacing:-.02em; text-align:center; opacity:0; transition:opacity 1s ease .6s; }
   .on .sub { opacity:1; }
@@ -65,6 +65,7 @@ async function boot() {
   window.__ready = true;
   if (P.get("scene")) show(P.get("scene"));
 }
-window.play = async () => { for (const sc of script.scenes) { show(sc.id); await new Promise(r => setTimeout(r, (timing[sc.id] + 0.9) * 1000)); } };
+const GAP = +(P.get("gap") || 0.9);
+window.play = async () => { for (const sc of script.scenes) { show(sc.id); await new Promise(r => setTimeout(r, (timing[sc.id] + GAP) * 1000)); } };
 boot();
 </script></body></html>
