@@ -1,10 +1,7 @@
 # Federated Robot Learning - Enabled by Argon
 **Demo site:** https://bouncypitch.github.io/hindsight/ · **1-minute video:** https://youtu.be/ZgMhqIWLpNs
 
-
-https://github.com/user-attachments/assets/a595df6e-e516-4359-8197-53674437900a
-
-
+https://github.com/user-attachments/assets/f1342774-0385-4251-81a7-e0a83d48397b
 
 **Hindsight.** Every robot failure makes the fleet smarter. Federated robot learning, enabled by Gemini 4 Argon.
 
