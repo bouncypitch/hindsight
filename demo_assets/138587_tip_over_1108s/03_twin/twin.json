@@ -1,0 +1,59 @@
+{
+ "spec": {
+  "kind": "obstacle",
+  "curb_height": 0.2,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "start_dist": 0.0,
+  "lateral_offset": 0.0,
+  "friction": 0.9,
+  "observed_speed": 0.25,
+  "obs_x": 0.6,
+  "obs_y": 0.15,
+  "obs_r": 0.03,
+  "ped_speed": 1.0,
+  "ped_start_y": -2.5,
+  "ped_t0": 0.0,
+  "name": "twin_v1"
+ },
+ "history": [
+  {
+   "try": 1,
+   "spec": {
+    "kind": "obstacle",
+    "curb_height": 0.2,
+    "slope_deg": 0.0,
+    "approach_angle_deg": 0.0,
+    "start_dist": 0.0,
+    "lateral_offset": 0.0,
+    "friction": 0.9,
+    "observed_speed": 0.25,
+    "obs_x": 0.6,
+    "obs_y": 0.15,
+    "obs_r": 0.03,
+    "ped_speed": 1.0,
+    "ped_start_y": -2.5,
+    "ped_t0": 0.0,
+    "name": "twin_v1"
+   },
+   "ok": true,
+   "check": "twin reproduces the collision (min clearance -0.005 m)",
+   "scenario": "twin_v1",
+   "outcome": "collided",
+   "success": false,
+   "fell": false,
+   "stalled": false,
+   "collided": true,
+   "near_miss": false,
+   "min_clearance": -0.005,
+   "fail_t": 1.35,
+   "duration": 1.35,
+   "edge_speed": 0.0020531527803885684,
+   "edge_heading_deg": -0.00017359562097696884,
+   "peak_impact": 32.7,
+   "max_tilt_deg": 0.0749740353907596,
+   "jerk": 0.0,
+   "video": "/Users/kdotmahesh/Code/argon-hack/demo_assets/138587_tip_over_1108s/03_twin/twin_v1.mp4"
+  }
+ ]
+}

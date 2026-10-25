@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Failure Case</title>
+<style>
+  :root { --bg:#0b0b0d; --card:#151518; --ink:#f4f4f5; --mute:#9b9ba3; --line:#26262b; --accent:#3b82f6; --bad:#ef4444; --ok:#22c55e; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#fafafa; --card:#fff; --ink:#111; --mute:#6b6b70; --line:#e6e6ea; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+  header { padding:28px 16px 8px; max-width:1100px; margin:0 auto; }
+  h1 { margin:0; font-size:26px; font-weight:650; letter-spacing:-0.01em; }
+  .sub { color:var(--mute); margin-top:6px; }
+  main { max-width:1100px; margin:0 auto; padding:8px 16px 48px; display:flex; flex-direction:column; gap:18px; }
+  .step { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .step h2 { margin:0; font-size:16px; font-weight:600; padding:14px 16px 0; }
+  .num { color:var(--accent); margin-right:8px; font-variant-numeric:tabular-nums; }
+  .body { padding:10px 16px 16px; display:grid; grid-template-columns: 1.4fr 1fr; gap:14px; }
+  @media (max-width:760px) { .body { grid-template-columns:1fr; } }
+  video { width:100%; border-radius:10px; background:#000; display:block; }
+  pre { margin:0; white-space:pre-wrap; word-break:break-word; font:12px/1.45 ui-monospace, Menlo, monospace; color:var(--mute); max-height:320px; overflow:auto; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-size:13px; }
+  .kv b { color:var(--mute); font-weight:500; }
+  .pill { display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px; border:1px solid var(--line); color:var(--mute); margin-right:6px; }
+  .pill.bad { background:var(--bad); color:#fff; border-color:var(--bad); }
+  .pill.ok { background:var(--ok); color:#fff; border-color:var(--ok); }
+  .big { font-size:30px; font-weight:650; }
+  .arrow { color:var(--mute); margin:0 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Failure case</h1>
+  <div class="sub" id="sub">Loading…</div>
+</header>
+<main id="steps"></main>
+<script>
+const dir = new URLSearchParams(location.search).get("dir");
+const base = "/" + dir.replace(/^\/|\/$/g, "") + "/";
+const pct = v => v == null ? "–" : Math.round(v * 100) + "%";
+
+function details(step, data) {
+  if (!data) return "";
+  if (data.failure_type) {
+    return `<div class="kv"><b>failure</b><span><span class="pill bad">${data.failure_type}</span> at ${data.t_sec}s · confidence ${data.confidence}</span>
+      <b>cause</b><span>${data.cause}</span>
+      <b>scene</b><span>${data.scene.scenario_kind} · ${Object.entries(data.scene).filter(([k,v]) => typeof v === "number" && v).map(([k,v]) => `${k.replace(/_/g," ")} ${v}`).join(" · ")}</span>
+      <b>unknowns</b><span>${(data.unknowns || []).join("; ")}</span></div>`;
+  }
+  if (data.before && data.after) {
+    return `<div><span class="big">${pct(data.before.success_rate)}</span><span class="arrow">→</span><span class="big">${pct(data.after.success_rate)}</span>
+      <div class="sub">success on the twin variants</div></div>
+      <div class="kv" style="margin-top:10px"><b>falls</b><span>${pct(data.before.fall_rate)} → ${pct(data.after.fall_rate)}</span>
+      <b>stalls</b><span>${pct(data.before.stall_rate)} → ${pct(data.after.stall_rate)}</span>
+      <b>collisions</b><span>${pct(data.before.collision_rate)} → ${pct(data.after.collision_rate)}</span>
+      <b>reward</b><span>${data.reward.split("/").pop()}</span></div>`;
+  }
+  if ("reward_hacking" in data) {
+    return `<div><span class="pill ${data.ship ? "ok" : "bad"}">${data.ship ? "ship" : "do not ship"}</span>
+      ${data.reward_hacking ? '<span class="pill bad">reward hacking</span>' : ""}
+      ${data.fixes_real_failure ? '<span class="pill ok">fixes real failure</span>' : '<span class="pill">does not fix it yet</span>'}</div>
+      ${data.hack_description ? `<p>${data.hack_description}</p>` : ""}
+      <pre>${(data.observations || []).join("\n")}</pre>`;
+  }
+  if (data.history) {
+    return `<pre>${data.history.map(h => `try ${h.try}: ${h.ok ? "REPRODUCED" : "mismatch"} - ${h.check}`).join("\n")}</pre>`;
+  }
+  if (data.ranges) {
+    return `<pre>${data.reasoning}\n\n${data.ranges.map(r => `${r.param}: -${r.minus} / +${r.plus}  (${r.why})`).join("\n")}</pre>`;
+  }
+  return `<pre>${JSON.stringify(data, null, 1).slice(0, 1500)}</pre>`;
+}
+
+async function load() {
+  const m = await (await fetch(base + "manifest.json", { cache: "no-store" })).json();
+  document.getElementById("title").textContent = m.name;
+  document.getElementById("sub").textContent = `${m.steps.length} steps · real fleet failure → Argon diagnosis → twin → variants → RL → Argon verification`;
+  const box = document.getElementById("steps");
+  box.innerHTML = "";
+  for (const [i, s] of m.steps.entries()) {
+    let data = null;
+    if (s.json) { try { data = await (await fetch(base + s.json, { cache: "no-store" })).json(); } catch (e) {} }
+    const el = document.createElement("section");
+    el.className = "step";
+    el.innerHTML = `<h2><span class="num">${String(i + 1).padStart(2, "0")}</span>${s.title}</h2>
+      <div class="body">${s.video ? `<video src="${base + s.video}" controls muted loop playsinline autoplay></video>` : "<div></div>"}
+      <div>${details(s, data)}</div></div>`;
+    box.appendChild(el);
+  }
+}
+load();
+</script>
+</body>
+</html>

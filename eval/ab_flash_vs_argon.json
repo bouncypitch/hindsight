@@ -1,0 +1,42 @@
+{
+ "n": 30,
+ "positives": 15,
+ "argon": {
+  "tp": 15,
+  "fp": 0,
+  "fn": 0,
+  "tn": 15,
+  "precision": 1.0,
+  "recall": 1.0,
+  "accuracy": 1.0
+ },
+ "flash": {
+  "tp": 12,
+  "fp": 0,
+  "fn": 3,
+  "tn": 15,
+  "precision": 1.0,
+  "recall": 0.8,
+  "accuracy": 0.9
+ },
+ "disagreements": [
+  {
+   "clip": "141099_collision_235s",
+   "truth": true,
+   "flash": "none",
+   "argon": "collision_object"
+  },
+  {
+   "clip": "141105_tip_over_202s",
+   "truth": true,
+   "flash": "none",
+   "argon": "tip_over"
+  },
+  {
+   "clip": "141102_tip_over_455s",
+   "truth": true,
+   "flash": "none",
+   "argon": "other_failure"
+  }
+ ]
+}

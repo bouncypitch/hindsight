@@ -1,0 +1,41 @@
+{
+ "reasoning": "The failure is a collision with a low-profile stationary obstacle (a small rover parked in front of a bin) while approaching at ~0.75 m/s on flat concrete. Because the IMU log was corrupted, exact speed and distances were estimated visually, creating uncertainty in `observed_speed`, `obs_x`, `obs_y`, and `obs_r`. Furthermore, to ensure the policy robustly avoids stationary obstacles across realistic variations of this encounter (including front-left, center, and front-right impacts, varied obstacle sizes like scooters or bins, and different stopping distances/surfaces), we randomize obstacle position (`obs_x`, `obs_y`), obstacle radius (`obs_r`), approach speed (`observed_speed`), ego lateral offset (`lateral_offset`), and surface friction (`friction`).",
+ "ranges": [
+  {
+   "param": "obs_x",
+   "minus": 0.6,
+   "plus": 0.8,
+   "why": "Account for visual estimation uncertainty around 1.8 m and test obstacle detection/braking across shorter (1.2 m) and longer (2.6 m) reaction distances."
+  },
+  {
+   "param": "obs_y",
+   "minus": 0.25,
+   "plus": 0.35,
+   "why": "Vary lateral position from -0.40 m (right-side clip) through center (0.0 m) to +0.20 m (left-side clip) so the policy cannot just swerve blindly in one direction."
+  },
+  {
+   "param": "obs_r",
+   "minus": 0.08,
+   "plus": 0.15,
+   "why": "Cover smaller low-profile obstacles (0.12 m radius, like scooter wheels) up to wider bins or larger rovers (0.35 m radius)."
+  },
+  {
+   "param": "observed_speed",
+   "minus": 0.25,
+   "plus": 0.45,
+   "why": "Sensor speed was unknown due to corrupted logs; sampling 0.50 to 1.20 m/s covers the visual estimate (~0.75 m/s) and higher speeds that challenge braking distance."
+  },
+  {
+   "param": "lateral_offset",
+   "minus": 0.25,
+   "plus": 0.25,
+   "why": "Simulate slight variations in the robot's initial curving trajectory and alignment relative to the obstacle."
+  },
+  {
+   "param": "friction",
+   "minus": 0.3,
+   "plus": 0.2,
+   "why": "Vary from dusty/damp concrete (0.6) to high-grip dry pavement (1.1) so braking and swerving maneuvers remain reliable."
+  }
+ ]
+}

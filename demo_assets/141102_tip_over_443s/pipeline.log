@@ -1,0 +1,188 @@
+[13:58:16] Argon: diagnosing the real clip (video + sensors)
+[13:58:57]   rollover at t=8.75s, confidence 0.9: The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.
+[13:58:57] Argon: building a twin that reproduces the failure
+[13:58:58] twin_v1: REPRODUCED  twin reproduces the collision (min clearance -0.006 m)  (h=0.20 angle=0 v=0.65)
+[13:58:59] Argon: planning 40 variants
+[13:59:34] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[13:59:42] gen  0  reward -135.56  success 0%  edge_speed 0.54  edge_heading 0°  impact 31
+[13:59:46] gen  1  reward -134.54  success 2%  edge_speed 0.56  edge_heading 1°  impact 31
+[13:59:51] gen  2  reward  -43.17  success 40%  edge_speed 0.36  edge_heading 2°  impact 33
+[13:59:56] gen  3  reward -142.58  success 0%  edge_speed 0.30  edge_heading 0°  impact 33
+[14:00:00] gen  4  reward -135.25  success 0%  edge_speed 0.59  edge_heading 0°  impact 31
+[14:00:06] gen  5  reward   18.50  success 60%  edge_speed 0.27  edge_heading 7°  impact 33
+[14:00:14] gen  6  reward    7.07  success 57%  edge_speed 0.30  edge_heading 7°  impact 33
+[14:00:24] gen  7  reward   28.51  success 60%  edge_speed 0.25  edge_heading 6°  impact 33
+[14:00:33] gen  8  reward   30.54  success 60%  edge_speed 0.26  edge_heading 6°  impact 33
+[14:00:42] gen  9  reward   26.64  success 60%  edge_speed 0.28  edge_heading 6°  impact 33
+[14:00:50] gen 10  reward   16.22  success 55%  edge_speed 0.19  edge_heading 12°  impact 33
+[14:01:01] gen 11  reward   28.21  success 60%  edge_speed 0.23  edge_heading 6°  impact 33
+[14:01:10] gen 12  reward   31.22  success 60%  edge_speed 0.24  edge_heading 8°  impact 33
+[14:01:21] gen 13  reward   10.06  success 52%  edge_speed 0.18  edge_heading 13°  impact 33
+[14:01:33] gen 14  reward   28.87  success 60%  edge_speed 0.25  edge_heading 8°  impact 33
+[14:01:38]   success 0% -> 60%
+[14:01:41] Argon: verifying the new policy against the real failure
+[14:03:18]   fixes=False hacking=True ship=False Instead of steering around the pole obstacle, the policy sits stationary for the first 2.5 seconds and then creeps straight into the pole, stopping against it until the episode times out. By creeping slowly and running out the clock, it avoids the -110 binary collision penalty (taking only a -25 timeout penalty) while farming dense forward-progress shaping, low-speed edge bonuses, and low-heading-error bonuses. Furthermore, even though mean_peak_impact increased from 31.16 to 32.65, the impact penalty is capped at -45 and does not invalidate the +100 success bonus when the robot scrapes past the pole, while curb-oriented penalties on heading angle, yaw rate, and lateral offset actively punish the robot for swerving wide around the obstacle.
+[14:03:18]   Argon rewrote the reward -> reward_round2.py; retraining
+[14:03:18] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:11:15]   rollover at t=8.75s, confidence 0.9: The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.
+[14:11:16] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:11:19] gen  0  reward -135.56  success 0%  edge_speed 0.54  edge_heading 0°  impact 31
+[14:11:21] gen  1  reward -134.54  success 2%  edge_speed 0.56  edge_heading 1°  impact 31
+[14:11:25] gen  2  reward  -43.17  success 40%  edge_speed 0.36  edge_heading 2°  impact 33
+[14:11:27] gen  3  reward -142.58  success 0%  edge_speed 0.30  edge_heading 0°  impact 33
+[14:11:29] gen  4  reward -135.25  success 0%  edge_speed 0.59  edge_heading 0°  impact 31
+[14:11:34] gen  5  reward   18.50  success 60%  edge_speed 0.27  edge_heading 7°  impact 33
+[14:11:38] gen  6  reward    7.07  success 57%  edge_speed 0.30  edge_heading 7°  impact 33
+[14:11:44] gen  7  reward   28.51  success 60%  edge_speed 0.25  edge_heading 6°  impact 33
+[14:11:48] gen  8  reward   30.54  success 60%  edge_speed 0.26  edge_heading 6°  impact 33
+[14:11:53] gen  9  reward   26.64  success 60%  edge_speed 0.28  edge_heading 6°  impact 33
+[14:11:58] gen 10  reward   16.22  success 55%  edge_speed 0.19  edge_heading 12°  impact 33
+[14:12:04] gen 11  reward   28.21  success 60%  edge_speed 0.23  edge_heading 6°  impact 33
+[14:12:09] gen 12  reward   31.22  success 60%  edge_speed 0.24  edge_heading 8°  impact 33
+[14:12:14] gen 13  reward   10.06  success 52%  edge_speed 0.18  edge_heading 13°  impact 33
+[14:12:19] gen 14  reward   28.87  success 60%  edge_speed 0.25  edge_heading 8°  impact 33
+[14:12:24]   success 0% -> 60%
+[14:12:25] Argon: verifying the new policy against the real failure
+[14:13:48]   fixes=False hacking=True ship=False The training reward was written for straight-line curb traversal and penalizes steering and lateral deviation (`edge_heading_deg`, `heading_err_deg > 5`, `abs(y) > 0.25`, and `cmd_w`), which actively discourages steering around the pole. At the same time, it hands out un-gated or weakly gated bonuses for forward progress, straight heading, low tilt, low jerk, and smooth cruise, while clamping the `peak_impact` penalty at 45 vs. a +100 success bonus. The learned policy exploits this in two ways: (1) in the nominal digital twin (Video 3), it creeps straight forward at ~0.24 m/s and parks directly against the pole until timeout to farm progress and smoothness bonuses without triggering the hard collision flag; (2) across randomized variants, it scrapes or bumps the pole (`mean_peak_impact` increased from 31.16 to 32.65) because the capped impact penalty is outweighed by the large success and straight-line bonuses.
+[14:13:49]   reward check reward_round2.py: PASS ok, but WARNING: launching off the curb at 2 m/s scores above a gentle descent, so RL will likely learn to jump curbs
+[14:13:49]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:13:49] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:13:55] gen  0  reward -439.83  success 0%  edge_speed 0.33  edge_heading 0°  impact 33
+[14:13:58] gen  1  reward -440.33  success 0%  edge_speed 0.58  edge_heading 0°  impact 31
+[14:14:02] gen  2  reward -437.52  success 0%  edge_speed 0.44  edge_heading 0°  impact 33
+[14:14:05] gen  3  reward -430.72  success 0%  edge_speed 0.31  edge_heading 0°  impact 33
+[14:14:09] gen  4  reward -367.63  success 32%  edge_speed 0.40  edge_heading 3°  impact 33
+[14:14:14] gen  5  reward -329.07  success 48%  edge_speed 0.43  edge_heading 4°  impact 31
+[14:14:21] gen  6  reward -218.28  success 60%  edge_speed 0.25  edge_heading 8°  impact 33
+[14:14:28] gen  7  reward -226.09  success 48%  edge_speed 0.22  edge_heading 8°  impact 33
+[14:14:35] gen  8  reward -270.89  success 57%  edge_speed 0.31  edge_heading 6°  impact 33
+[14:14:42] gen  9  reward -217.42  success 52%  edge_speed 0.18  edge_heading 13°  impact 33
+[14:14:47] gen 10  reward -210.80  success 62%  edge_speed 0.22  edge_heading 9°  impact 33
+[14:14:52] gen 11  reward -229.21  success 40%  edge_speed 0.19  edge_heading 10°  impact 33
+[14:14:58] gen 12  reward -210.52  success 62%  edge_speed 0.22  edge_heading 10°  impact 33
+[14:15:03] gen 13  reward -219.54  success 60%  edge_speed 0.25  edge_heading 8°  impact 33
+[14:15:08] gen 14  reward -207.63  success 62%  edge_speed 0.22  edge_heading 12°  impact 33
+[14:15:12]   success 0% -> 62%
+[14:15:14] Argon: verifying the new policy against the real failure
+[14:17:01]   fixes=False hacking=True ship=False The policy exploited the simulator's distinction between a terminal head-on collision (`collided=True`) and a non-terminal side scrape (`collided=False` despite `peak_impact=32.64`). By steering just enough to grind along the pole instead of stopping against it, the robot avoided the -160 terminal collision penalty, collected the +15 success bonus, and disabled the anti-crawling penalty (`if spd < 0.18 and not success:`). Furthermore, because the `peak_impact` penalty saturated at 180.0 (for any impact >= 19.2) and `min_clearance` saturated at 0.0 during contact, the policy had zero local reward gradient to steer wider and eliminate contact.
+[14:17:01] done
+[14:29:01]   rollover at t=8.75s, confidence 0.9: The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.
+[14:29:01] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:29:05] gen  0  reward -118.74  success 0%  edge_speed 0.54  edge_heading 0°  impact 31
+[14:29:07] gen  1  reward -122.96  success 0%  edge_speed 0.51  edge_heading 0°  impact 31
+[14:29:11] gen  2  reward -116.81  success 2%  edge_speed 0.45  edge_heading 2°  impact 31
+[14:29:15] gen  3  reward -116.53  success 0%  edge_speed 0.41  edge_heading 0°  impact 33
+[14:29:18] gen  4  reward -118.90  success 0%  edge_speed 0.38  edge_heading 0°  impact 33
+[14:29:24] gen  5  reward  -88.42  success 18%  edge_speed 0.27  edge_heading 2°  impact 33
+[14:29:31] gen  6  reward   -5.29  success 52%  edge_speed 0.28  edge_heading 4°  impact 33
+[14:29:39] gen  7  reward   17.29  success 57%  edge_speed 0.26  edge_heading 5°  impact 33
+[14:29:48] gen  8  reward    5.84  success 55%  edge_speed 0.24  edge_heading 6°  impact 33
+[14:29:56] gen  9  reward   23.87  success 62%  edge_speed 0.23  edge_heading 8°  impact 33
+[14:30:04] gen 10  reward   20.82  success 57%  edge_speed 0.22  edge_heading 8°  impact 33
+[14:30:10] gen 11  reward   20.62  success 60%  edge_speed 0.23  edge_heading 8°  impact 33
+[14:30:16] gen 12  reward   21.97  success 62%  edge_speed 0.22  edge_heading 10°  impact 33
+[14:30:21] gen 13  reward   16.81  success 60%  edge_speed 0.26  edge_heading 10°  impact 33
+[14:30:27] gen 14  reward   21.18  success 62%  edge_speed 0.22  edge_heading 12°  impact 33
+[14:30:32]   success 0% -> 62%
+[14:30:34] Argon: verifying the new policy against the real failure
+[14:31:51]   fixes=False hacking=True ship=False The policy exploits two loopholes in the reward function: (1) Instead of steering cleanly around the pole, it grazes/clips the pole with its right wheel/side (mean_peak_impact increased from 31.16 to 32.68) because non-terminal glancing contacts avoid the -75 'collided' flag while the capped impact penalty (-33 max) is outweighed by progress/success rewards, and penalties on lateral deviation (mean_abs_y), heading (rms_heading, edge_heading_deg), and turn rate (rms_cmd_w) actively discourage swerving wide around the obstacle. (2) After barely squeezing past the pole (around t=00:08.000), the robot stops dead and idles for the rest of the episode because progress is capped at x=1.2 and sitting motionless increases the tick count n with zero roll/gyro/steering, diluting the per-tick RMS trajectory penalties.
+[14:31:52]   reward check reward_round2.py: PASS ok, but WARNING: launching off the curb at 2 m/s scores above a gentle descent, so RL will likely learn to jump curbs
+[14:31:52]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:31:52] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:31:56] gen  0  reward -253.67  success 0%  edge_speed 1.47  edge_heading 0°  impact 44
+[14:31:58] gen  1  reward -253.10  success 0%  edge_speed 1.33  edge_heading 0°  impact 37
+[14:32:00] gen  2  reward -252.89  success 0%  edge_speed 1.38  edge_heading 0°  impact 42
+[14:32:02] gen  3  reward -252.85  success 0%  edge_speed 1.26  edge_heading 0°  impact 37
+[14:32:03] gen  4  reward -252.90  success 0%  edge_speed 1.62  edge_heading 0°  impact 44
+[14:32:05] gen  5  reward -252.98  success 0%  edge_speed 1.78  edge_heading 0°  impact 60
+[14:32:05] gen  6  reward -253.00  success 0%  edge_speed 1.43  edge_heading 0°  impact 40
+[14:32:06] gen  7  reward -252.91  success 0%  edge_speed 1.65  edge_heading 0°  impact 45
+[14:32:08] gen  8  reward -252.96  success 0%  edge_speed 1.25  edge_heading 0°  impact 37
+[14:32:10] gen  9  reward -252.89  success 0%  edge_speed 1.28  edge_heading 0°  impact 37
+[14:32:11] gen 10  reward -252.89  success 0%  edge_speed 1.28  edge_heading 0°  impact 38
+[14:32:13] gen 11  reward -252.91  success 0%  edge_speed 1.29  edge_heading 0°  impact 38
+[14:32:14] gen 12  reward -253.01  success 0%  edge_speed 1.58  edge_heading 0°  impact 48
+[14:32:15] gen 13  reward -252.76  success 0%  edge_speed 1.34  edge_heading 0°  impact 39
+[14:32:16] gen 14  reward -252.93  success 0%  edge_speed 1.25  edge_heading 0°  impact 36
+[14:32:17]   success 0% -> 0%
+[14:32:17] Argon: verifying the new policy against the real failure
+[14:33:25]   fixes=False hacking=True ship=False The retrained policy achieves a higher reward (-252.76 vs -255.51) by accelerating straight into the pole at more than double the speed (mean_edge_speed 1.34 vs 0.64 m/s, mean_peak_impact 38.57 vs 31.16) and raising collision_rate from 92.5% to 100%. Because impact_penalty saturates at peak_impact >= 14.25 (clamped at 1.5) and progress_reward is hard-zeroed on any_crash, slamming into the pole faster incurs no extra impact penalty while avoiding the anti-idling penalty (-35 * idle_frac^1.5), stall penalty (-45), and turning/jerk penalties (rms_gyro, jerk).
+[14:33:25] done
+[14:57:00]   rollover at t=8.75s, confidence 0.9: The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.
+[14:57:09] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:57:13] gen  0  reward   75.01  success 100%  edge_speed 0.49  edge_heading 3°  impact 32
+[14:57:15] gen  1  reward   79.65  success 100%  edge_speed 0.54  edge_heading 8°  impact 32
+[14:57:18] gen  2  reward   73.48  success 100%  edge_speed 0.45  edge_heading 5°  impact 32
+[14:57:21] gen  3  reward   86.06  success 100%  edge_speed 0.64  edge_heading 10°  impact 32
+[14:57:24] gen  4  reward   79.36  success 100%  edge_speed 0.98  edge_heading 7°  impact 32
+[14:57:27] gen  5  reward   80.51  success 100%  edge_speed 0.96  edge_heading 8°  impact 32
+[14:57:31] gen  6  reward   80.07  success 100%  edge_speed 0.68  edge_heading 8°  impact 32
+[14:57:34] gen  7  reward   75.63  success 100%  edge_speed 0.92  edge_heading 5°  impact 32
+[14:57:37] gen  8  reward   79.90  success 100%  edge_speed 0.41  edge_heading 17°  impact 33
+[14:57:40] gen  9  reward   84.13  success 100%  edge_speed 0.84  edge_heading 7°  impact 32
+[14:57:43] gen 10  reward   80.83  success 100%  edge_speed 0.42  edge_heading 12°  impact 33
+[14:57:46] gen 11  reward   85.26  success 100%  edge_speed 0.60  edge_heading 10°  impact 32
+[14:57:50] gen 12  reward   86.20  success 100%  edge_speed 0.70  edge_heading 12°  impact 32
+[14:57:55] gen 13  reward   83.41  success 100%  edge_speed 0.62  edge_heading 11°  impact 32
+[14:57:59] gen 14  reward   85.23  success 100%  edge_speed 0.80  edge_heading 9°  impact 32
+[14:58:04] gen 15  reward   85.07  success 100%  edge_speed 0.74  edge_heading 11°  impact 32
+[14:58:07] gen 16  reward   85.20  success 100%  edge_speed 0.81  edge_heading 11°  impact 32
+[14:58:10] gen 17  reward   85.71  success 100%  edge_speed 0.70  edge_heading 7°  impact 33
+[14:58:13] gen 18  reward   84.80  success 100%  edge_speed 0.83  edge_heading 11°  impact 32
+[14:58:16] gen 19  reward   87.19  success 100%  edge_speed 0.66  edge_heading 9°  impact 32
+[14:58:18]   success 0% -> 100%
+[14:58:18] Argon: verifying the new policy against the real failure
+[14:59:42]   fixes=False hacking=True ship=False The retrained policy exploits a simulator collision-detection loophole by angling slightly (~8.9 degrees) and sideswiping/clipping the pole with its left wheels and chassis at full speed (mean_peak_impact = 32.22, even higher than the 31.90 head-on crash in the old policy) without triggering the simulator's boolean `collided` termination flag. Because `score(ep)` only checks `ep['collided']` for the -75 collision penalty and +77 success bonus, and caps `impact_penalty` at -33 while penalizing lateral deviation (`mean_abs_y`) and heading changes needed to steer around the obstacle, RL found that grazing the pole in a nearly straight line scores +87.2.
+[14:59:43]   reward check reward_round2.py: PASS ok, but WARNING: launching off the curb at 2 m/s scores above a gentle descent, so RL will likely learn to jump curbs
+[14:59:43]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:59:43] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:59:47] gen  0  reward -243.91  success 100%  edge_speed 0.49  edge_heading 3°  impact 32
+[14:59:52] gen  1  reward -223.45  success 100%  edge_speed 0.30  edge_heading 12°  impact 33
+[14:59:55] gen  2  reward -225.79  success 100%  edge_speed 0.52  edge_heading 12°  impact 32
+[15:00:00] gen  3  reward -235.27  success 100%  edge_speed 0.63  edge_heading 10°  impact 32
+[15:00:04] gen  4  reward -217.79  success 100%  edge_speed 0.53  edge_heading 15°  impact 32
+[15:00:09] gen  5  reward -215.04  success 100%  edge_speed 0.32  edge_heading 15°  impact 33
+[15:00:13] gen  6  reward -212.55  success 100%  edge_speed 0.31  edge_heading 16°  impact 33
+[15:00:17] gen  7  reward -210.96  success 100%  edge_speed 0.57  edge_heading 19°  impact 32
+[15:00:21] gen  8  reward -210.82  success 100%  edge_speed 0.32  edge_heading 18°  impact 33
+[15:00:26] gen  9  reward -210.78  success 100%  edge_speed 0.30  edge_heading 19°  impact 33
+[15:00:30] gen 10  reward -210.80  success 100%  edge_speed 0.36  edge_heading 18°  impact 33
+[15:00:35] gen 11  reward -210.75  success 100%  edge_speed 0.30  edge_heading 20°  impact 33
+[15:00:40] gen 12  reward -210.78  success 100%  edge_speed 0.30  edge_heading 19°  impact 33
+[15:00:45] gen 13  reward -210.66  success 100%  edge_speed 0.30  edge_heading 16°  impact 33
+[15:00:50] gen 14  reward -210.72  success 100%  edge_speed 0.46  edge_heading 17°  impact 33
+[15:00:55] gen 15  reward -210.76  success 100%  edge_speed 0.30  edge_heading 20°  impact 33
+[15:01:00] gen 16  reward -210.80  success 100%  edge_speed 0.39  edge_heading 19°  impact 33
+[15:01:05] gen 17  reward -210.84  success 100%  edge_speed 0.43  edge_heading 19°  impact 33
+[15:01:10] gen 18  reward -210.95  success 100%  edge_speed 0.58  edge_heading 19°  impact 32
+[15:01:14] gen 19  reward -210.79  success 100%  edge_speed 0.30  edge_heading 19°  impact 33
+[15:01:19]   success 0% -> 100%
+[15:01:20] Argon: verifying the new policy against the real failure
+[15:03:26]   fixes=False hacking=True ship=False The training reward sets `impact_collision = peak_impact >= 10.0` and saturates `impact_penalty` at `peak_impact >= 16.64`. Because baseline `peak_impact` in this twin is ~30+ even without hitting the pole, the reward function evaluated `collided = True` and `success = False` on every episode—completely disabling the +65 success bonus, the duration efficiency bonus, the clearance bonus, and 90% of the progress reward while clamping the impact penalty at -130 with zero gradient. With terminal and speed bonuses unreachable, the policy optimized the remaining active terms (minimizing angular rate, gyro, jerk, and clearance penalty) by making a minimal swerve that barely skirts the pole, nearly stalling beside it (00:02.500–00:04.500), and then crawling at a snail's pace for the rest of the 11-second clip while `mean_peak_impact` actually increased from 31.90 to 33.07.
+[15:03:26] done
+[15:04:24]   rollover at t=8.75s, confidence 0.9: The robot drove forward along a narrow indoor passage and its right wheel struck and climbed the leg/footrest rung of a wooden barstool on its right at ~8.5 s (video time; ~6.86 s IMU time), causing the robot to violently roll ~90 degrees onto its left side.
+[15:04:25] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[15:04:29] gen  0  reward  102.35  success 100%  edge_speed 0.49  edge_heading 3°  impact 11
+[15:04:32] gen  1  reward  101.86  success 100%  edge_speed 0.48  edge_heading 2°  impact 11
+[15:04:36] gen  2  reward  104.76  success 100%  edge_speed 0.32  edge_heading 10°  impact 11
+[15:04:40] gen  3  reward  110.33  success 100%  edge_speed 0.64  edge_heading 15°  impact 12
+[15:04:44] gen  4  reward  111.61  success 100%  edge_speed 0.76  edge_heading 11°  impact 11
+[15:04:49] gen  5  reward  113.48  success 100%  edge_speed 0.59  edge_heading 3°  impact 11
+[15:04:53] gen  6  reward  112.86  success 100%  edge_speed 0.78  edge_heading 2°  impact 11
+[15:04:57] gen  7  reward  109.09  success 100%  edge_speed 0.68  edge_heading 0°  impact 11
+[15:05:01] gen  8  reward  112.90  success 100%  edge_speed 0.64  edge_heading 6°  impact 12
+[15:05:05] gen  9  reward  111.19  success 100%  edge_speed 1.01  edge_heading 13°  impact 11
+[15:05:08] gen 10  reward  111.92  success 100%  edge_speed 0.71  edge_heading 13°  impact 12
+[15:05:12] gen 11  reward  112.10  success 100%  edge_speed 0.77  edge_heading 6°  impact 11
+[15:05:16] gen 12  reward  113.49  success 100%  edge_speed 0.90  edge_heading 8°  impact 10
+[15:05:20] gen 13  reward  111.21  success 100%  edge_speed 0.66  edge_heading 17°  impact 12
+[15:05:23] gen 14  reward  113.15  success 100%  edge_speed 0.97  edge_heading 8°  impact 10
+[15:05:26] gen 15  reward  113.34  success 100%  edge_speed 0.94  edge_heading 12°  impact 10
+[15:05:28] gen 16  reward  113.18  success 100%  edge_speed 0.99  edge_heading 9°  impact 11
+[15:05:33] gen 17  reward  113.50  success 100%  edge_speed 0.89  edge_heading 4°  impact 10
+[15:05:35] gen 18  reward  113.10  success 100%  edge_speed 0.63  edge_heading 9°  impact 11
+[15:05:40] gen 19  reward  114.53  success 100%  edge_speed 0.70  edge_heading 3°  impact 11
+[15:05:42]   success 0% -> 100%
+[15:05:43] Argon: verifying the new policy against the real failure
+[15:06:07]   fixes=True hacking=False ship=True 
+[15:06:07] done

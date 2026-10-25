@@ -1,0 +1,77 @@
+{
+ "title": "Hindsight in one minute",
+ "scenes": [
+  {
+   "id": "m_open",
+   "kicker": "Built with Gemini 4 Argon",
+   "headline": "Federated Robot Learning: Enabled by Argon",
+   "sub": "Robots that learn from their own failures.",
+   "media": [
+    "/demo_assets/coco_09294dbb/real_twin_omni.mp4"
+   ],
+   "say": "Robots usually learn from demonstrations. Hindsight teaches them from their failures, indoors and outdoors, with Gemini 4 Argon.",
+   "fit": true,
+   "captions": [
+    "Real robot camera",
+    "Argon's 3D twin",
+    "Twin + Gemini Omni"
+   ]
+  },
+  {
+   "id": "m_find",
+   "kicker": "Find",
+   "headline": "Argon finds real failures in fleet video.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/01_real_failure.mp4",
+    "/data/mini4k_clips/138572_tip_over_216s.mp4",
+    "/data/mini4k_clips/137907_collision_104s.mp4",
+    "/data/mini4k_clips/137941_tip_over_467s.mp4"
+   ],
+   "stat": "130 candidates \u00b7 44 confirmed by Argon \u00b7 15 of 15 correct on human review",
+   "say": "Argon scans raw fleet video and confirms only failures it can see. A barstool. A dog. Another robot. A garden edge. Fifteen out of fifteen checked by a human were right."
+  },
+  {
+   "id": "m_twin",
+   "kicker": "Rebuild",
+   "headline": "A digital twin that fails the same way.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/barstool_story.mp4"
+   ],
+   "captions": [
+    "Real failure",
+    "Twin: original behavior",
+    "Twin: retrained"
+   ],
+   "say": "It diagnoses each failure and rebuilds it as a physics twin that must reproduce the crash. Gemini Omni makes the twin look real."
+  },
+  {
+   "id": "m_learn",
+   "kicker": "Learn, safely",
+   "headline": "RL learns. Argon catches it cheating, then approves the real fix.",
+   "quote": "The robot smoothly steers left to give the obstacle a wide berth, passing with thirty centimeters of clearance, and realigns without oscillation, stalling, or collision.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/photoreal/twin_old_chase_omni.mp4",
+    "/demo_assets/141102_tip_over_443s/photoreal/twin_new_chase_omni.mp4"
+   ],
+   "say": "Reinforcement learning retrains on forty variants. Argon catches the robot gaming the reward, rewrites it, and only approves the fix that steers around the leg, every time.",
+   "captions_small": true
+  },
+  {
+   "id": "m_fleet",
+   "kicker": "Share",
+   "headline": "Federated robot learning.",
+   "big": "770,000\u00d7",
+   "bigcap": "less data: only what changes the policy is uploaded",
+   "say": "Robots upload only what changes the policy: not hours of video, just kilobytes. And Argon approves every update."
+  },
+  {
+   "id": "m_why",
+   "kicker": "How it works",
+   "headline": "What would not be possible without Argon.",
+   "media": [
+    "/app/site/architecture.svg"
+   ],
+   "say": "For robotics teams, every field failure becomes a test and a verified fix. One model that sees, reasons about physics, writes the code, and knows when not to ship. That's Hindsight."
+  }
+ ]
+}

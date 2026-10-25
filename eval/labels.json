@@ -1,0 +1,290 @@
+[
+ {
+  "id": "iRKNckUmhaI",
+  "source": "https://www.youtube.com/watch?v=iRKNckUmhaI",
+  "view": "bystander",
+  "label": "tip_over",
+  "note": "robot upside-down on a grassy cycle path, rescued by passer-by",
+  "labeled_by": "news report"
+ },
+ {
+  "id": "PC8PgOzPKJc",
+  "source": "https://www.youtube.com/watch?v=PC8PgOzPKJc",
+  "view": "bystander",
+  "label": "collision_pedestrian",
+  "note": "Serve robot collides with man on mobility scooter, West Hollywood (disputed whether staged)",
+  "labeled_by": "news report"
+ },
+ {
+  "id": "Kaz3S6lZtlU",
+  "source": "https://www.youtube.com/shorts/Kaz3S6lZtlU",
+  "view": "bystander",
+  "label": "collision_vehicle",
+  "note": "delivery robot struck by turning car while crossing",
+  "labeled_by": "news report"
+ },
+ {
+  "id": "ws10BVc3iHM",
+  "source": "https://www.youtube.com/watch?v=ws10BVc3iHM",
+  "view": "bystander",
+  "label": "curb_failure",
+  "note": "delivery bot gets stuck on a curb, Palisades Park, Santa Monica",
+  "labeled_by": "news report"
+ },
+ {
+  "id": "ep00001_shock_129s",
+  "source": "data/real_clips/ep00001_shock_129s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00220_tilt_19s",
+  "source": "data/real_clips_v2/ep00220_tilt_19s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00649_tilt_190s",
+  "source": "data/real_clips_v3/ep00649_tilt_190s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00001_stall_20s",
+  "source": "data/real_clips/ep00001_stall_20s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00057_stall_12s",
+  "source": "data/real_clips/ep00057_stall_12s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00004_shock_144s",
+  "source": "data/real_clips/ep00004_shock_144s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00311_tilt_222s",
+  "source": "data/real_clips_v2/ep00311_tilt_222s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00684_tilt_243s",
+  "source": "data/real_clips_v3/ep00684_tilt_243s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00019_stall_3s",
+  "source": "data/real_clips/ep00019_stall_3s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00004_shock_63s",
+  "source": "data/real_clips/ep00004_shock_63s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00148_stall_192s",
+  "source": "data/real_clips/ep00148_stall_192s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00070_stall_16s",
+  "source": "data/real_clips/ep00070_stall_16s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00062_stall_12s",
+  "source": "data/real_clips/ep00062_stall_12s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00094_stall_146s",
+  "source": "data/real_clips/ep00094_stall_146s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00060_stall_8s",
+  "source": "data/real_clips/ep00060_stall_8s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00067_stall_64s",
+  "source": "data/real_clips/ep00067_stall_64s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00168_stall_55s",
+  "source": "data/real_clips/ep00168_stall_55s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00009_brake_30s",
+  "source": "data/real_clips/ep00009_brake_30s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00011_brake_59s",
+  "source": "data/real_clips/ep00011_brake_59s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00025_brake_89s",
+  "source": "data/real_clips/ep00025_brake_89s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00245_stall_14s",
+  "source": "data/real_clips_v2/ep00245_stall_14s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "ep00199_brake_26s",
+  "source": "data/real_clips_v2/ep00199_brake_26s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "flagged by old miner",
+  "labeled_by": "user"
+ },
+ {
+  "id": "collision_ep00189_51s",
+  "source": "data/visual_candidates/collision/ep00189_51s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged collision; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "collision_ep00198_12s",
+  "source": "data/visual_candidates/collision/ep00198_12s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged collision; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "collision_ep00238_12s",
+  "source": "data/visual_candidates/collision/ep00238_12s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged collision; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "collision_ep00300_28s",
+  "source": "data/visual_candidates/collision/ep00300_28s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged collision; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "curb_fall_ep00017_417s",
+  "source": "data/visual_candidates/curb_fall/ep00017_417s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged curb_fall; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "curb_fall_ep00232_188s",
+  "source": "data/visual_candidates/curb_fall/ep00232_188s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged curb_fall; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "curb_fall_ep00579_47s",
+  "source": "data/visual_candidates/curb_fall/ep00579_47s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged curb_fall; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "tip_over_ep00253_196s",
+  "source": "data/visual_candidates/tip_over/ep00253_196s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged tip_over; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "tip_over_ep00264_96s",
+  "source": "data/visual_candidates/tip_over/ep00264_96s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged tip_over; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ },
+ {
+  "id": "tip_over_ep00307_177s",
+  "source": "data/visual_candidates/tip_over/ep00307_177s.mp4",
+  "view": "robot",
+  "label": "none",
+  "note": "visual scanner flagged tip_over; frames show no failure",
+  "labeled_by": "claude (frame review)"
+ }
+]

@@ -1,0 +1,14 @@
+{
+ "argon_confirmed": 19,
+ "candidates": 41,
+ "user_checked_confirmed": 15,
+ "user_agrees_confirmed": 15,
+ "user_checked_rejected": 1,
+ "user_agrees_rejected": 1,
+ "unmarked_confirmed": [
+  "141105_collision_172s",
+  "141105_collision_130s",
+  "141112_collision_274s",
+  "141117_tip_over_249s"
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "name": "138587_tip_over_1108s",
+ "steps": [
+  {
+   "title": "Real fleet clip",
+   "video": "01_real_failure.mp4"
+  },
+  {
+   "title": "Argon diagnosis",
+   "json": "02_diagnosis.json"
+  },
+  {
+   "title": "Twin reproduces the failure",
+   "video": "03_twin_old_policy.mp4",
+   "json": "03_twin/twin.json"
+  },
+  {
+   "title": "Many copies of the failure",
+   "video": "04_variants_grid.mp4",
+   "json": "03_twin/variation_plan.json"
+  },
+  {
+   "title": "RL round 1: before vs after",
+   "video": "05_twin_new_policy_round1.mp4",
+   "json": "05_rl_round1.json"
+  },
+  {
+   "title": "Argon verdict round 1",
+   "json": "06_verdict_round1.json"
+  },
+  {
+   "title": "RL round 2: before vs after",
+   "video": "05_twin_new_policy_round2.mp4",
+   "json": "05_rl_round2.json"
+  },
+  {
+   "title": "Argon verdict round 2",
+   "json": "06_verdict_round2.json"
+  },
+  {
+   "title": "Trajectories for the photoreal viewer",
+   "old": "07_traj_old.json",
+   "new": "07_traj_new.json"
+  }
+ ]
+}

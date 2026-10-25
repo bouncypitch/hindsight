@@ -1,0 +1,41 @@
+{
+ "reasoning": "The failure is a backward/lateral rollover (`climb` scenario) caused by accelerating up a ~14° mulch mound and striking a ~0.11 m stone/cobble landscaping curb at the crest at ~1.1 m/s with a slight oblique angle (reproduced in sim at curb_height=0.15, slope_deg=16.0, approach_angle_deg=-20.0, observed_speed=1.2). To train a policy that generalizes across this failure mode, we should randomize the geometric and dynamic parameters that govern pitch-up and lateral roll stability on sloped curb climbs: `curb_height` (accounting for the 0.10–0.12 m visual uncertainty and the 0.15 m sim twin), `slope_deg` (covering moderate to steep mounds around 10–22°), `approach_angle_deg` (covering nearly head-on to moderately oblique left/right approaches that induce roll), `observed_speed` (covering the uncertainty around 1.1 m/s up to full speed), `friction` (soil/mulch/pine needles vs stone cobble have highly variable grip), and `start_dist` (varying the run-up distance from 1.1 m up to 4.0 m so the policy learns both short starts and full-speed approaches). Obstacle and pedestrian parameters are irrelevant to a `climb` scene and are omitted.",
+ "ranges": [
+  {
+   "param": "curb_height",
+   "minus": 0.05,
+   "plus": 0.05,
+   "why": "Spans 0.10 m to 0.20 m around the 0.15 m base, covering the estimated 0.10–0.12 m real cobble height as well as taller landscaping borders that guarantee rollover if hit fast."
+  },
+  {
+   "param": "slope_deg",
+   "minus": 6.0,
+   "plus": 6.0,
+   "why": "Spans 10° to 22° around the 16° base, brackets the ~14° real mulch mound and tests neighboring grade severities that compound pitch-up."
+  },
+  {
+   "param": "approach_angle_deg",
+   "minus": 15.0,
+   "plus": 30.0,
+   "why": "Spans -35° to +10° around the -20° base, covering the real ~-5° nearly perpendicular impact as well as sharper oblique angles that trigger asymmetric single-wheel climbs and lateral rollovers."
+  },
+  {
+   "param": "observed_speed",
+   "minus": 0.4,
+   "plus": 0.6,
+   "why": "Spans 0.8 m/s to 1.8 m/s around the 1.2 m/s base, covering the ~1.1 m/s estimated impact speed and faster approaches where kinetic energy drives the nose past vertical."
+  },
+  {
+   "param": "friction",
+   "minus": 0.35,
+   "plus": 0.25,
+   "why": "Spans 0.55 to 1.15 around the 0.9 base, reflecting loose mulch/pine needles vs high-bite stone cobble that catches the front tires and flips the robot."
+  },
+  {
+   "param": "start_dist",
+   "minus": 2.9,
+   "plus": 0.0,
+   "why": "Spans 1.1 m to 4.0 m (below the 4.0 m ceiling), bridging the gap between the short 1.1 m real-world acceleration from rest on the mound and longer run-ups."
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+[14:19:19] Argon: diagnosing the real clip (video + sensors)
+[14:20:12]   collision at t=9.0s, confidence 0.85: After turning left and pausing for nearly four seconds facing a low white concrete barrier and a large cone marked '3', the robot accelerated straight forward at 7.625 s and collided head-on with the barrier at 9.000 s. The IMU log does not match the video timeline (showing motion and a 0.95 g lateral spike at 7.02 s while the video shows the robot completely stationary), so the video is trusted.
+[14:20:12] Argon: building a twin that reproduces the failure
+[14:20:13] twin_v1: REPRODUCED  twin reproduces the collision (min clearance -0.007 m)  (h=0.20 angle=0 v=0.90)
+[14:20:13] Argon: planning 40 variants
+[14:20:35] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:20:41] gen  0  reward -129.51  success 0%  edge_speed 0.34  edge_heading 0°  impact 33
+[14:20:45] gen  1  reward -119.08  success 0%  edge_speed 0.28  edge_heading 2°  impact 33
+[14:20:48] gen  2  reward -131.82  success 0%  edge_speed 0.52  edge_heading 1°  impact 31
+[14:20:51] gen  3  reward -116.90  success 5%  edge_speed 0.44  edge_heading 3°  impact 31
+[14:20:54] gen  4  reward -108.64  success 5%  edge_speed 0.31  edge_heading 3°  impact 33
+[14:20:57] gen  5  reward -106.13  success 10%  edge_speed 0.25  edge_heading 4°  impact 33
+[14:21:01] gen  6  reward  -71.48  success 28%  edge_speed 0.30  edge_heading 5°  impact 33
+[14:21:04] gen  7  reward  -42.89  success 38%  edge_speed 0.26  edge_heading 8°  impact 33
+[14:21:09] gen  8  reward  -14.84  success 45%  edge_speed 0.19  edge_heading 11°  impact 33
+[14:21:14] gen  9  reward  -24.92  success 38%  edge_speed 0.18  edge_heading 10°  impact 33
+[14:21:18] gen 10  reward  -72.95  success 25%  edge_speed 0.38  edge_heading 5°  impact 31
+[14:21:24] gen 11  reward  -15.28  success 45%  edge_speed 0.19  edge_heading 11°  impact 33
+[14:21:29] gen 12  reward   -6.06  success 50%  edge_speed 0.19  edge_heading 13°  impact 33
+[14:21:34] gen 13  reward  -16.25  success 45%  edge_speed 0.20  edge_heading 11°  impact 33
+[14:21:40] gen 14  reward   -5.72  success 50%  edge_speed 0.19  edge_heading 14°  impact 33
+[14:21:44]   success 0% -> 50%
+[14:21:45] Argon: verifying the new policy against the real failure
+[14:23:10]   fixes=False hacking=True ship=False Instead of steering around the cylindrical obstacle, the retrained policy hesitates for over a second and then creeps straight up to the obstacle face and stops/times out just before triggering a hard collision flag. It exploits two flaws in the reward function: (1) timeout (-25) and stall (-35) penalties are much smaller than the collision penalty (-110), while positive forward progress, low-jerk, low-tilt, and steady-cruise bonuses are gated on `progress_gate` rather than actual task success—allowing a robot that creeps up to the obstacle and stalls to achieve a near-zero reward (-5.7 vs -155.8); and (2) lateral position (`y_pos > 0.25`), heading deviation (`hdg_err > 5.0`), and yaw-rate (`cmd_w`) penalties actively punish the evasive steering maneuver required to go around the obstacle.
+[14:23:11]   reward check reward_round2.py: PASS ok
+[14:23:11]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:23:11] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:23:15] gen  0  reward -359.18  success 0%  edge_speed 0.79  edge_heading 0°  impact 31
+[14:23:17] gen  1  reward -359.34  success 0%  edge_speed 0.94  edge_heading 0°  impact 31
+[14:23:18] gen  2  reward -361.29  success 0%  edge_speed 0.95  edge_heading 0°  impact 31
+[14:23:19] gen  3  reward -357.25  success 0%  edge_speed 0.82  edge_heading 0°  impact 31
+[14:23:21] gen  4  reward -360.66  success 0%  edge_speed 0.99  edge_heading 0°  impact 31
+[14:23:23] gen  5  reward -358.37  success 0%  edge_speed 0.76  edge_heading 0°  impact 31
+[14:23:25] gen  6  reward -359.42  success 0%  edge_speed 0.92  edge_heading 0°  impact 31
+[14:23:27] gen  7  reward -358.91  success 0%  edge_speed 0.89  edge_heading 0°  impact 31
+[14:23:28] gen  8  reward -359.19  success 0%  edge_speed 0.89  edge_heading 0°  impact 31
+[14:23:30] gen  9  reward -358.34  success 0%  edge_speed 0.93  edge_heading 0°  impact 31
+[14:23:32] gen 10  reward -360.22  success 0%  edge_speed 0.84  edge_heading 0°  impact 31
+[14:23:34] gen 11  reward -357.19  success 0%  edge_speed 0.84  edge_heading 0°  impact 31
+[14:23:36] gen 12  reward -357.20  success 0%  edge_speed 0.89  edge_heading 0°  impact 31
+[14:23:37] gen 13  reward -360.51  success 0%  edge_speed 0.94  edge_heading 0°  impact 31
+[14:23:38] gen 14  reward -357.57  success 0%  edge_speed 0.87  edge_heading 0°  impact 31
+[14:23:39]   success 0% -> 0%
+[14:23:40] Argon: verifying the new policy against the real failure
+[14:25:05]   fixes=False hacking=False ship=False 
+[14:25:05] done

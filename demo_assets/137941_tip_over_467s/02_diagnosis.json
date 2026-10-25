@@ -1,0 +1,38 @@
+{
+ "failed": true,
+ "t_sec": 7.25,
+ "failure_type": "rollover",
+ "cause": "After accelerating up a ~14° mulch mound from rest (t = 5.88–6.88 s), the robot hit a ~0.11 m stone/cobble landscaping curb at the top of the slope at ~1.1 m/s (t = 7.00 s). The impact on the uphill grade pitched the nose sharply upward past vertical (video 00:07.125–00:07.625; IMU ay_g peaking at 1.967 g at t = 7.36 s) and rolled the robot onto its right side and roof (az_g = -0.67 g, ax_g = -0.70 g from t = 8.36–9.66 s).",
+ "evidence": [
+  "00:03.625–00:05.750 (IMU t = 3.60–5.18 s): Robot is stationary on a slight ~8° uphill grade (ay_g ≈ 0.136 g, az_g ≈ 1.03 g) just in front of a dark mulch mound.",
+  "00:05.875–00:06.875 (IMU t = 5.38–6.86 s): Robot accelerates forward up the ~14° dark mulch slope (ay_g ≈ 0.20–0.49 g) toward a curved stone/cobble border at the crest.",
+  "00:07.000 (IMU t = 6.96–7.16 s): Front wheels strike/climb the stone border; az_g briefly unloads to 0.044–0.101 g followed by a 1.95 g spike at t = 7.16 s.",
+  "00:07.125–00:07.625 (IMU t = 7.26–7.66 s): Camera pitches monotonically upward into the tree canopy as the robot tips backward (ay_g reaches 1.967 g at t = 7.36 s and 1.716 g at t = 7.46 s) and rolls counter-clockwise in the image (onto its right side/roof).",
+  "00:08.375–00:10.250 (IMU t = 8.36–9.66 s): Robot comes to rest inverted on its right-side roof on the mulch slope (ax_g ≈ -0.70 g, ay_g ≈ -0.15 g, az_g ≈ -0.67 g, ~134° right roll).",
+  "00:10.375–00:11.875 (IMU t = 10.36–11.92 s): Robot shifts/rolls further to rest at ~90° on its right side (ax_g ≈ -0.94 g, ay_g ≈ -0.01 g, az_g ≈ -0.10 g), confirming the IMU frame has +z up, +y longitudinal/pitch, and +x lateral-right/roll."
+ ],
+ "scene": {
+  "scenario_kind": "climb",
+  "obstacle_distance_m": 1.1,
+  "obstacle_lateral_m": 0.0,
+  "obstacle_radius_m": 0.0,
+  "mover_speed_mps": 0.0,
+  "curb_height_m": 0.11,
+  "slope_deg": 14.0,
+  "approach_angle_deg": -5.0,
+  "speed_mps": 1.1,
+  "t_edge_sec": 7.0,
+  "surface": "soil, mulch, pine needles, and stone cobble edging",
+  "other_factors": [
+   "The ~0.11 m stone/cobble curb sits at the crest of a ~14 deg mulch mound, compounding the pitch-up angle when the front wheels strike the curb.",
+   "The stone border is slightly higher/rougher on the left side (near the rock retaining wall), inducing a rightward roll as the nose pitches up.",
+   "Video and IMU agree closely once accounting for the IMU axis mounting (+y forward, +x right, +z up)."
+  ]
+ },
+ "confidence": 0.88,
+ "unknowns": [
+  "Exact height and profile of the stone/cobble border hidden under leaves/mulch (estimated at ~0.10–0.12 m from visual scale).",
+  "Exact wheel speed from encoders (speed estimated at ~1.1 m/s from covering ~1.1 m in 1.1 s from rest).",
+  "Payload mass and center-of-gravity height inside the tall cargo bay, which strongly affect backward tip-over stability on steep climbs."
+ ]
+}

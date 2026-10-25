@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coco Robotics Digital Twin – Indoor Barstool Collision</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #14110f;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+  #ui {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(18, 16, 15, 0.85);
+    backdrop-filter: blur(8px);
+    color: #eee;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 10;
+    font-size: 13px;
+    user-select: none;
+  }
+  #ui.hidden {
+    display: none !important;
+  }
+  #ui button {
+    background: #332e2a;
+    color: #fff;
+    border: 1px solid #554d46;
+    border-radius: 6px;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  #ui button:hover {
+    background: #48413b;
+  }
+  #ui input[type="range"] {
+    width: 200px;
+    accent-color: #ff6b2b;
+  }
+  .label-val {
+    min-width: 48px;
+    font-variant-numeric: tabular-nums;
+    color: #ffb088;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="ui">
+  <button id="playBtn">Pause</button>
+  <input id="timeSlider" type="range" min="0" max="2.72" step="0.001" value="0" />
+  <span id="timeLabel" class="label-val">0.000s</span>
+  <button id="camBtn">Cam: Robot</button>
+  <span>Pitch:</span>
+  <input id="pitchSlider" type="range" min="-15" max="10" step="0.1" value="-7.4" style="width:90px" />
+  <span id="pitchLabel" class="label-val">-7.4°</span>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ============================================================================
+// URL PARAMETERS & FALLBACK TRAJECTORY
+// ============================================================================
+const params = new URLSearchParams(window.location.search);
+const trajUrl = params.get('traj');
+let camMode = params.get('cam') === 'chase' ? 'chase' : 'robot';
+const isCapture = params.get('capture') === '1';
+
+const uiEl = document.getElementById('ui');
+if (isCapture) uiEl.classList.add('hidden');
+
+const FALLBACK_TRAJ = {
+  fps: 30,
+  camera: { hfov_deg: 120.0, vfov_deg: 88.0, height_m: 0.12, aspect: 1.7777777777777777 },
+  frames: buildDenseFallbackFrames(),
+  outcome: 'collided',
+  obstacle: { x: 1.4, y: -0.15, r: 0.03 },
+  pedestrian: null
+};
+
+function buildDenseFallbackFrames() {
+  const keys = [
+    { t: 0.00, x: 0.0000, y: 0.0000, yaw: 0.0000, z: 0.1700 },
+    { t: 0.68, x: 0.3488, y: 0.0000, yaw: 0.0000, z: 0.1499 },
+    { t: 1.36, x: 0.7868, y: 0.0000, yaw: 0.0000, z: 0.1499 },
+    { t: 2.04, x: 1.1144, y: 0.0087, yaw: -0.0389, z: 0.1499 },
+    { t: 2.72, x: 1.1143, y: 0.0087, yaw: -0.0389, z: 0.1499 }
+  ];
+  const out = [];
+  const total = 82;
+  for (let i = 0; i <= total; i++) {
+    const t = +(i / 30).toFixed(4);
+    let k0 = keys[0], k1 = keys[keys.length - 1];
+    for (let j = 0; j < keys.length - 1; j++) {
+      if (t >= keys[j].t && t <= keys[j + 1].t) {
+        k0 = keys[j];
+        k1 = keys[j + 1];
+        break;
+      }
+    }
+    const u = k1.t > k0.t ? (t - k0.t) / (k1.t - k0.t) : 0;
+    out.push({
+      t,
+      x: k0.x + (k1.x - k0.x) * u,
+      y: k0.y + (k1.y - k0.y) * u,
+      yaw: k0.yaw + (k1.yaw - k0.yaw) * u,
+      z: k0.z + (k1.z - k0.z) * u
+    });
+  }
+  return out;
+}
+
+// ============================================================================
+// RENDERER, SCENE, CAMERAS, POST-PROCESSING
+// ============================================================================
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  preserveDrawingBuffer: true,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.04;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9a9688);
+scene.fog = new THREE.FogExp2(0x8c877c, 0.032);
+
+// Robot camera: vfov 88 deg, aspect 1.7778
+const robotCamera = new THREE.PerspectiveCamera(88.0, 16 / 9, 0.025, 40.0);
+const chaseCamera = new THREE.PerspectiveCamera(60.0, window.innerWidth / window.innerHeight, 0.05, 50.0);
+
+let activeCamera = camMode === 'chase' ? chaseCamera : robotCamera;
+let pitchDeg = -7.4; // Matches the exact horizon v_px = 233.5 in the reference frames
+
+// Post-processing composer
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(scene, activeCamera);
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.18, // subtle bloom strength on bright hallway window / stainless oven
+  0.45,
+  0.86
+);
+composer.addPass(bloomPass);
+
+// Custom camera look pass: matches wide-angle lens corner hood vignette, subtle motion softness, and sensor grain
+const CameraGradeShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0.0 },
+    uMotionBlur: { value: 0.0 },
+    uIsRobotCam: { value: 1.0 }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uMotionBlur;
+    uniform float uIsRobotCam;
+    varying vec2 vUv;
+
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    void main() {
+      vec2 uv = vUv;
+
+      if (uIsRobotCam > 0.5) {
+        // Subtle wide-angle radial curve matching the real front camera
+        vec2 centered = uv * 2.0 - 1.0;
+        float r2 = dot(centered, centered);
+        vec2 warped = centered * (1.0 - 0.018 * r2);
+        uv = clamp(warped * 0.5 + 0.5, 0.001, 0.999);
+      }
+
+      // Slight radial/motion blur when robot is moving (t > 0.15s)
+      vec3 col = texture2D(tDiffuse, uv).rgb;
+      if (uIsRobotCam > 0.5 && uMotionBlur > 0.01) {
+        vec2 dir = (uv - vec2(0.47, 0.44)) * 0.0045 * uMotionBlur;
+        vec2 px = vec2(1.0 / 960.0, 1.0 / 540.0) * 1.15 * uMotionBlur;
+        vec3 blurCol = col * 0.36;
+        blurCol += texture2D(tDiffuse, clamp(uv + dir, 0.001, 0.999)).rgb * 0.16;
+        blurCol += texture2D(tDiffuse, clamp(uv - dir, 0.001, 0.999)).rgb * 0.16;
+        blurCol += texture2D(tDiffuse, clamp(uv + vec2(px.x, 0.0), 0.001, 0.999)).rgb * 0.08;
+        blurCol += texture2D(tDiffuse, clamp(uv - vec2(px.x, 0.0), 0.001, 0.999)).rgb * 0.08;
+        blurCol += texture2D(tDiffuse, clamp(uv + vec2(0.0, px.y), 0.001, 0.999)).rgb * 0.08;
+        blurCol += texture2D(tDiffuse, clamp(uv - vec2(0.0, px.y), 0.001, 0.999)).rgb * 0.08;
+        col = mix(col, blurCol, 0.85);
+      }
+
+      if (uIsRobotCam > 0.5) {
+        // Subtle lens hood dark corner vignette at bottom-left and bottom-right corners
+        float blDist = length((vUv - vec2(0.0, 0.0)) * vec2(1.35, 1.0));
+        float blMask = smoothstep(0.045, 0.125, blDist);
+
+        float brDist = length((vUv - vec2(1.0, 0.0)) * vec2(1.45, 1.0));
+        float brMask = smoothstep(0.035, 0.105, brDist);
+
+        // General soft optical peripheral falloff
+        vec2 d = (vUv - 0.5) * vec2(1.1, 0.95);
+        float vig = 1.0 - 0.16 * dot(d, d);
+
+        col *= blMask * brMask * clamp(vig, 0.75, 1.0);
+
+        // Slight sensor grain & warm-indoor color balance
+        float n = (hash(vUv * 620.0 + uTime * 13.7) - 0.5) * 0.016;
+        col += vec3(n);
+      }
+
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }
+  `
+};
+const gradePass = new ShaderPass(CameraGradeShader);
+composer.addPass(gradePass);
+
+const outputPass = new OutputPass();
+composer.addPass(outputPass);
+
+// ============================================================================
+// PROCEDURAL CANVAS TEXTURES
+// ============================================================================
+function createHardwoodFloorTextures() {
+  const w = 2048, h = 2048;
+  const diffCanvas = document.createElement('canvas');
+  diffCanvas.width = w; diffCanvas.height = h;
+  const ctx = diffCanvas.getContext('2d');
+
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = w; bumpCanvas.height = h;
+  const bCtx = bumpCanvas.getContext('2d');
+
+  const roughCanvas = document.createElement('canvas');
+  roughCanvas.width = w; roughCanvas.height = h;
+  const rCtx = roughCanvas.getContext('2d');
+
+  // Base dark espresso/walnut fill
+  ctx.fillStyle = '#3b2b22';
+  ctx.fillRect(0, 0, w, h);
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, w, h);
+  rCtx.fillStyle = '#323232';
+  rCtx.fillRect(0, 0, w, h);
+
+  // Planks run along Z (horizontally across the passage).
+  // In UV space: U is along Z (across passage), V is along X (forward along passage).
+  const numRows = 36; // each row is a plank width along X (~0.13m)
+  const rowH = h / numRows;
+
+  let seed = 42;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  for (let r = 0; r < numRows; r++) {
+    const y0 = r * rowH;
+    // Joint splits along U (across passage)
+    let xCursor = (r % 2 === 0 ? 0.12 : 0.45) * w + (rand() - 0.5) * 180;
+    const splits = [0, ((xCursor % w) + w) % w, w].sort((a, b) => a - b);
+    if (splits[1] > 250 && splits[1] < w - 250) {
+      const s2 = (splits[1] + 550 + rand() * 350) % w;
+      splits.push(s2);
+      splits.sort((a, b) => a - b);
+    }
+
+    for (let s = 0; s < splits.length - 1; s++) {
+      const x0 = splits[s];
+      const pw = splits[s + 1] - x0;
+      const tone = (rand() - 0.5) * 14;
+      const baseR = Math.round(62 + tone);
+      const baseG = Math.round(45 + tone * 0.78);
+      const baseB = Math.round(37 + tone * 0.65);
+
+      const grad = ctx.createLinearGradient(x0, y0, x0, y0 + rowH);
+      grad.addColorStop(0, `rgb(${baseR - 5},${baseG - 4},${baseB - 3})`);
+      grad.addColorStop(0.5, `rgb(${baseR + 4},${baseG + 3},${baseB + 2})`);
+      grad.addColorStop(1, `rgb(${baseR - 4},${baseG - 3},${baseB - 3})`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x0, y0, pw, rowH);
+
+      // Wood grain streaks running horizontally along the plank (U direction)
+      for (let g = 0; g < 26; g++) {
+        const gy = y0 + rand() * rowH;
+        const gh = 1 + rand() * 3.5;
+        const dark = rand() > 0.45;
+        ctx.fillStyle = dark ? 'rgba(22, 14, 10, 0.18)' : 'rgba(96, 74, 60, 0.14)';
+        ctx.fillRect(x0, gy, pw, gh);
+
+        bCtx.fillStyle = dark ? 'rgba(105,105,105,0.22)' : 'rgba(148,148,148,0.22)';
+        bCtx.fillRect(x0, gy, pw, gh);
+      }
+
+      // Subtle hand-scraped cross chatter marks (visible in foreground of Frame 1)
+      for (let c = 0; c < 8; c++) {
+        const cx = x0 + rand() * pw;
+        const cw = 18 + rand() * 45;
+        ctx.fillStyle = 'rgba(24, 16, 12, 0.16)';
+        ctx.fillRect(cx, y0 + 2, cw, rowH - 4);
+        rCtx.fillStyle = `rgb(${42 + Math.floor(rand() * 24)},${42 + Math.floor(rand() * 24)},${42 + Math.floor(rand() * 24)})`;
+        rCtx.fillRect(cx, y0, cw, rowH);
+      }
+
+      // Vertical plank end-seam groove
+      if (s > 0) {
+        ctx.fillStyle = 'rgba(14, 9, 6, 0.85)';
+        ctx.fillRect(x0 - 1.5, y0, 3.0, rowH);
+        ctx.fillStyle = 'rgba(105, 84, 70, 0.28)';
+        ctx.fillRect(x0 + 1.5, y0, 1.5, rowH);
+
+        bCtx.fillStyle = '#202020';
+        bCtx.fillRect(x0 - 2, y0, 4, rowH);
+      }
+    }
+
+    // Horizontal plank bevel seam (runs left-to-right across passage)
+    ctx.fillStyle = 'rgba(14, 9, 6, 0.88)';
+    ctx.fillRect(0, y0 - 1.5, w, 3.0);
+    ctx.fillStyle = 'rgba(115, 92, 78, 0.32)';
+    ctx.fillRect(0, y0 + 1.5, w, 2.0);
+
+    bCtx.fillStyle = '#181818';
+    bCtx.fillRect(0, y0 - 2.5, w, 5.0);
+    rCtx.fillStyle = '#707070';
+    rCtx.fillRect(0, y0 - 2, w, 4);
+  }
+
+  const map = new THREE.CanvasTexture(diffCanvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(2.2, 1.8);
+  map.anisotropy = 16;
+
+  const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+  bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  bumpMap.repeat.set(2.2, 1.8);
+  bumpMap.anisotropy = 16;
+
+  const roughMap = new THREE.CanvasTexture(roughCanvas);
+  roughMap.wrapS = roughMap.wrapT = THREE.RepeatWrapping;
+  roughMap.repeat.set(2.2, 1.8);
+  roughMap.anisotropy = 16;
+
+  return { map, bumpMap, roughMap };
+}
+
+function createHoneyWoodTexture(brightTop = false) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+
+  if (brightTop) {
+    // Matches the exact warm wood panel on the kitchen island with upper window-light bounce
+    const grad = ctx.createLinearGradient(0, 0, 140, 512);
+    grad.addColorStop(0.0, '#f3e5d8');
+    grad.addColorStop(0.26, '#DFC3A8');
+    grad.addColorStop(0.55, '#b68c67');
+    grad.addColorStop(0.85, '#9d7452');
+    grad.addColorStop(1.0, '#8d6647');
+    ctx.fillStyle = grad;
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0.0, '#b58b64');
+    grad.addColorStop(0.5, '#9b724e');
+    grad.addColorStop(1.0, '#825d3e');
+    ctx.fillStyle = grad;
+  }
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Subtle vertical maple/oak wood grain
+  let s = 101;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 180; i++) {
+    const x = rand() * 512;
+    const w = 1 + rand() * 3.5;
+    ctx.fillStyle = rand() > 0.5 ? 'rgba(72, 45, 25, 0.08)' : 'rgba(255, 235, 210, 0.07)';
+    ctx.fillRect(x, 0, w, 512);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function createDistressedSageTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 512;
+  const ctx = c.getContext('2d');
+
+  // Sage-grey painted wood of the barstools
+  const grad = ctx.createLinearGradient(0, 0, 256, 0);
+  grad.addColorStop(0.0, '#6d736a');
+  grad.addColorStop(0.35, '#959d93');
+  grad.addColorStop(0.65, '#8a9288');
+  grad.addColorStop(1.0, '#636860');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 512);
+
+  let s = 77;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 140; i++) {
+    const x = rand() * 256;
+    const y = rand() * 512;
+    const h = 25 + rand() * 110;
+    ctx.fillStyle = rand() > 0.45 ? 'rgba(55, 58, 50, 0.16)' : 'rgba(210, 218, 210, 0.14)';
+    ctx.fillRect(x, y, 1.5 + rand() * 2, h);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createGraniteTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4c4945';
+  ctx.fillRect(0, 0, 512, 512);
+
+  let s = 313;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const colors = ['#2b2927', '#6c6862', '#8f8980', '#383430', '#aba49b', '#1f1d1b'];
+  for (let i = 0; i < 3800; i++) {
+    ctx.fillStyle = colors[Math.floor(rand() * colors.length)];
+    const x = rand() * 512, y = rand() * 512;
+    const r = 1.5 + rand() * 6.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  return tex;
+}
+
+function createStoneUrnTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#7c7872';
+  ctx.fillRect(0, 0, 256, 256);
+
+  let s = 909;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let i = 0; i < 900; i++) {
+    ctx.fillStyle = rand() > 0.5 ? 'rgba(155, 150, 142, 0.22)' : 'rgba(65, 60, 55, 0.22)';
+    ctx.beginPath();
+    ctx.arc(rand() * 256, rand() * 256, 2 + rand() * 9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createBacksplashTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#9aa6ad';
+  ctx.fillRect(0, 0, 512, 256);
+  let s = 555;
+  const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  for (let y = 0; y < 256; y += 16) {
+    for (let x = 0; x < 512; x += 32) {
+      const ox = (y / 16) % 2 === 0 ? 0 : 16;
+      const v = 130 + Math.floor(rand() * 65);
+      ctx.fillStyle = `rgb(${v - 6},${v},${v + 6})`;
+      ctx.fillRect((x + ox) % 512, y, 30, 14);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 2);
+  return tex;
+}
+
+// ============================================================================
+// BUILD SCENE GEOMETRY & REFLECTIONS
+// ============================================================================
+const worldRoot = new THREE.Group();
+scene.add(worldRoot);
+
+// Everything added to roomGroup will also be mirrored into reflectionGroup (Y -> -Y)
+// so the glossy hardwood floor displays true vertical reflections of the barstool legs,
+// white baby gate, stair post, and kitchen island at every camera position!
+const roomGroup = new THREE.Group();
+worldRoot.add(roomGroup);
+
+const honeyWoodIslandTex = createHoneyWoodTexture(true);
+const honeyWoodTex = createHoneyWoodTexture(false);
+const sageWoodTex = createDistressedSageTexture();
+const graniteTex = createGraniteTexture();
+const stoneUrnTex = createStoneUrnTexture();
+const backsplashTex = createBacksplashTexture();
+
+// Shared materials
+const matSageLeg = new THREE.MeshStandardMaterial({
+  map: sageWoodTex,
+  roughness: 0.55,
+  metalness: 0.04
+});
+const matCreamCushion = new THREE.MeshStandardMaterial({
+  color: 0xf4f3ee,
+  emissive: 0xd8d6ce,
+  emissiveIntensity: 0.35,
+  roughness: 0.45
+});
+const matBrassTack = new THREE.MeshStandardMaterial({
+  color: 0x43392e,
+  roughness: 0.35,
+  metalness: 0.75
+});
+const matDarkSeatUnder = new THREE.MeshStandardMaterial({
+  color: 0x1b1917,
+  roughness: 0.85
+});
+const matIslandFront = new THREE.MeshStandardMaterial({
+  map: honeyWoodIslandTex,
+  roughness: 0.42,
+  metalness: 0.03
+});
+const matWarmOak = new THREE.MeshStandardMaterial({
+  map: honeyWoodTex,
+  roughness: 0.46,
+  metalness: 0.04
+});
+const matGranite = new THREE.MeshStandardMaterial({
+  map: graniteTex,
+  roughness: 0.32,
+  metalness: 0.08
+});
+const matWhiteTrim = new THREE.MeshStandardMaterial({
+  color: 0xf2f6fa,
+  emissive: 0xdde7f0,
+  emissiveIntensity: 0.26,
+  roughness: 0.35
+});
+const matBrightWhiteGlow = new THREE.MeshBasicMaterial({
+  color: 0xf4f9ff
+});
+const matIron = new THREE.MeshStandardMaterial({
+  color: 0x2a2c2e,
+  roughness: 0.42,
+  metalness: 0.65
+});
+
+// ----------------------------------------------------------------------------
+// 1. BARSTOOL BUILDER (Exact measurements derived from Frames 1-4)
+// ----------------------------------------------------------------------------
+function buildTurnedLeg() {
+  const legGroup = new THREE.Group();
+
+  // Lathe profile for turned segments (Y = 0 to 0.150m, and Y = 0.205 to 0.405m)
+  const ptsLower = [
+    new THREE.Vector2(0.000, 0.000),
+    new THREE.Vector2(0.014, 0.002),
+    new THREE.Vector2(0.021, 0.025),
+    new THREE.Vector2(0.017, 0.033),
+    new THREE.Vector2(0.023, 0.042),
+    new THREE.Vector2(0.024, 0.095),
+    new THREE.Vector2(0.023, 0.138),
+    new THREE.Vector2(0.018, 0.145),
+    new THREE.Vector2(0.022, 0.152)
+  ];
+  const geoLower = new THREE.LatheGeometry(ptsLower, 20);
+  const meshLower = new THREE.Mesh(geoLower, matSageLeg);
+  meshLower.castShadow = true;
+  meshLower.receiveShadow = true;
+  legGroup.add(meshLower);
+
+  // Square block joint where footrest stretchers connect (Y = 0.150 to 0.206m)
+  const blockGeo = new THREE.BoxGeometry(0.048, 0.056, 0.048);
+  const blockMesh = new THREE.Mesh(blockGeo, matSageLeg);
+  blockMesh.position.y = 0.178;
+  blockMesh.castShadow = true;
+  legGroup.add(blockMesh);
+
+  // Subtle top/bottom collar rings on the block joint
+  const collarGeo = new THREE.BoxGeometry(0.051, 0.006, 0.051);
+  const collarBot = new THREE.Mesh(collarGeo, matSageLeg);
+  collarBot.position.y = 0.152;
+  legGroup.add(collarBot);
+  const collarTop = new THREE.Mesh(collarGeo, matSageLeg);
+  collarTop.position.y = 0.204;
+  legGroup.add(collarTop);
+
+  // Upper turned shaft (Y = 0.206 to 0.406m)
+  const ptsUpper = [
+    new THREE.Vector2(0.022, 0.206),
+    new THREE.Vector2(0.017, 0.214),
+    new THREE.Vector2(0.023, 0.224),
+    new THREE.Vector2(0.024, 0.310),
+    new THREE.Vector2(0.022, 0.388),
+    new THREE.Vector2(0.017, 0.396),
+    new THREE.Vector2(0.023, 0.406)
+  ];
+  const geoUpper = new THREE.LatheGeometry(ptsUpper, 20);
+  const meshUpper = new THREE.Mesh(geoUpper, matSageLeg);
+  meshUpper.castShadow = true;
+  legGroup.add(meshUpper);
+
+  // Upper square block at seat apron (Y = 0.406 to 0.482m)
+  const topBlockGeo = new THREE.BoxGeometry(0.050, 0.076, 0.050);
+  const topBlock = new THREE.Mesh(topBlockGeo, matSageLeg);
+  topBlock.position.y = 0.444;
+  legGroup.add(topBlock);
+
+  return legGroup;
+}
+
+function createBarstool(xFront, xBack, zLeft, zRight) {
+  const stool = new THREE.Group();
+
+  // Four legs at exact solved positions
+  const corners = [
+    [xFront, zLeft],
+    [xFront, zRight],
+    [xBack, zLeft],
+    [xBack, zRight]
+  ];
+  for (const [lx, lz] of corners) {
+    const leg = buildTurnedLeg();
+    leg.position.set(lx, 0, lz);
+    stool.add(leg);
+  }
+
+  const xMid = 0.5 * (xFront + xBack);
+  const zMid = 0.5 * (zLeft + zRight);
+  const depthX = xBack - xFront;
+  const widthZ = zRight - zLeft;
+
+  // Horizontal footrest rungs (stretchers)
+  // Front & back rungs (along Z, at Y = 0.178m)
+  const rungFrontGeo = new THREE.CylinderGeometry(0.014, 0.014, widthZ, 16);
+  rungFrontGeo.rotateX(Math.PI / 2);
+  const rungFront = new THREE.Mesh(rungFrontGeo, matSageLeg);
+  rungFront.position.set(xFront, 0.178, zMid);
+  stool.add(rungFront);
+
+  const rungBack = new THREE.Mesh(rungFrontGeo, matSageLeg);
+  rungBack.position.set(xBack, 0.178, zMid);
+  stool.add(rungBack);
+
+  // Left & right rungs (along X, at Y = 0.184m - clearly visible in Frame 4!)
+  const rungSideGeo = new THREE.CylinderGeometry(0.015, 0.015, depthX, 16);
+  rungSideGeo.rotateZ(Math.PI / 2);
+  const rungLeft = new THREE.Mesh(rungSideGeo, matSageLeg);
+  rungLeft.position.set(xMid, 0.184, zLeft);
+  stool.add(rungLeft);
+
+  const rungRight = new THREE.Mesh(rungSideGeo, matSageLeg);
+  rungRight.position.set(xMid, 0.184, zRight);
+  stool.add(rungRight);
+
+  // Wooden seat apron rails (Y = 0.432 to 0.480m)
+  const apronH = 0.048;
+  const apronY = 0.456;
+  const frontApron = new THREE.Mesh(new THREE.BoxGeometry(0.026, apronH, widthZ), matSageLeg);
+  frontApron.position.set(xFront, apronY, zMid);
+  stool.add(frontApron);
+
+  const backApron = new THREE.Mesh(new THREE.BoxGeometry(0.026, apronH, widthZ), matSageLeg);
+  backApron.position.set(xBack, apronY, zMid);
+  stool.add(backApron);
+
+  const leftApron = new THREE.Mesh(new THREE.BoxGeometry(depthX, apronH, 0.026), matSageLeg);
+  leftApron.position.set(xMid, apronY, zLeft);
+  stool.add(leftApron);
+
+  const rightApron = new THREE.Mesh(new THREE.BoxGeometry(depthX, apronH, 0.026), matSageLeg);
+  rightApron.position.set(xMid, apronY, zRight);
+  stool.add(rightApron);
+
+  // Dark underside of seat + wooden cross-slats (visible looking up in Frames 1-4)
+  const underBox = new THREE.Mesh(
+    new THREE.BoxGeometry(depthX - 0.02, 0.015, widthZ - 0.02),
+    matDarkSeatUnder
+  );
+  underBox.position.set(xMid, 0.468, zMid);
+  stool.add(underBox);
+
+  for (let i = -2; i <= 2; i++) {
+    const slat = new THREE.Mesh(
+      new THREE.BoxGeometry(0.018, 0.012, widthZ - 0.03),
+      new THREE.MeshStandardMaterial({ color: 0x3b352f, roughness: 0.8 })
+    );
+    slat.position.set(xMid + i * 0.042, 0.442, zMid);
+    stool.add(slat);
+  }
+
+  // Cream padded top cushion (Y = 0.480 to 0.524m)
+  const cushW = depthX + 0.056;
+  const cushZ = widthZ + 0.056;
+  const cushGeo = new THREE.BoxGeometry(cushW, 0.044, cushZ);
+  const cushion = new THREE.Mesh(cushGeo, matCreamCushion);
+  cushion.position.set(xMid, 0.502, zMid);
+  stool.add(cushion);
+
+  // Brass upholstery tacks along front and left edges of cushion (Y = 0.485m)
+  const tackGeo = new THREE.SphereGeometry(0.0045, 8, 8);
+  const numTacksZ = 15;
+  for (let i = 0; i < numTacksZ; i++) {
+    const tz = (zLeft - 0.018) + (i / (numTacksZ - 1)) * (widthZ + 0.036);
+    const tack = new THREE.Mesh(tackGeo, matBrassTack);
+    tack.position.set(xFront - 0.028, 0.485, tz);
+    stool.add(tack);
+  }
+  const numTacksX = 14;
+  for (let i = 0; i < numTacksX; i++) {
+    const tx = (xFront - 0.018) + (i / (numTacksX - 1)) * (depthX + 0.036);
+    const tack = new THREE.Mesh(tackGeo, matBrassTack);
+    tack.position.set(tx, 0.485, zLeft - 0.028);
+    stool.add(tack);
+  }
+
+  return stool;
+}
+
+// Stool 1: Front-left leg at (X=0.920, Z=0.142), Back-left leg at (X=1.202, Z=0.142)
+roomGroup.add(createBarstool(0.920, 1.202, 0.142, 0.385));
+
+// Stool 2: Front-left leg at exact obstacle coordinate (X=1.400, Z=0.145 -> sim x=1.4, y=-0.15)
+roomGroup.add(createBarstool(1.400, 1.682, 0.145, 0.385));
+
+// Stool 3: Further back under the island overhang
+roomGroup.add(createBarstool(1.880, 2.160, 0.145, 0.385));
+
+// ----------------------------------------------------------------------------
+// 2. KITCHEN ISLAND, CORBEL, AND GRANITE OVERHANG (Right Side, Z > 0.11m)
+// ----------------------------------------------------------------------------
+const islandGroup = new THREE.Group();
+roomGroup.add(islandGroup);
+
+// Main front-facing honey-oak panel of the island (X = 0.823 to 2.65, Z = 0.449 to 1.09)
+const islandBodyGeo = new THREE.BoxGeometry(1.85, 0.86, 0.64);
+const islandBody = new THREE.Mesh(islandBodyGeo, matIslandFront);
+islandBody.position.set(0.823 + 0.925, 0.43, 0.449 + 0.32);
+islandGroup.add(islandBody);
+
+// Recessed cabinet backing behind the barstools (X = 0.88 to 2.65, Z = 0.415 to 0.455)
+const islandBackWall = new THREE.Mesh(
+  new THREE.BoxGeometry(1.77, 0.86, 0.04),
+  new THREE.MeshStandardMaterial({ color: 0x614a37, roughness: 0.6 })
+);
+islandBackWall.position.set(1.765, 0.43, 0.435);
+islandGroup.add(islandBackWall);
+
+// Baseboard trim wrapping the front (-X) and left (-Z) of the kitchen island (Y = 0 to 0.105m)
+const baseFront = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.105, 0.655), matWarmOak);
+baseFront.position.set(0.815, 0.0525, 0.443 + 0.3275);
+islandGroup.add(baseFront);
+
+const baseLeft = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.105, 0.014), matWarmOak);
+baseLeft.position.set(0.815 + 0.925, 0.0525, 0.442);
+islandGroup.add(baseLeft);
+
+// Thin light trim line along the top of the baseboard (visible in Frames 1-4)
+const baseHighlightLine = new THREE.Mesh(
+  new THREE.BoxGeometry(1.86, 0.003, 0.66),
+  new THREE.MeshBasicMaterial({ color: 0xdcc0a3 })
+);
+baseHighlightLine.position.set(0.814 + 0.93, 0.106, 0.441 + 0.33);
+islandGroup.add(baseHighlightLine);
+
+// White electrical outlet plate near top-left of the island front panel (visible in Frame 1)
+const outletPlate = new THREE.Mesh(
+  new THREE.BoxGeometry(0.008, 0.095, 0.062),
+  matBrightWhiteGlow
+);
+outletPlate.position.set(0.819, 0.565, 0.488);
+islandGroup.add(outletPlate);
+
+const outletInner = new THREE.Mesh(
+  new THREE.BoxGeometry(0.010, 0.048, 0.026),
+  new THREE.MeshBasicMaterial({ color: 0x262930 })
+);
+outletInner.position.set(0.818, 0.568, 0.488);
+islandGroup.add(outletInner);
+
+// Curved wooden corbel supporting the granite overhang (X = 0.83, Z = 0.315 to 0.449, Y = 0.51 to 0.68)
+const corbelShape = new THREE.Shape();
+corbelShape.moveTo(0.315, 0.675);
+corbelShape.lineTo(0.449, 0.675);
+corbelShape.lineTo(0.449, 0.505);
+corbelShape.lineTo(0.425, 0.505);
+corbelShape.quadraticCurveTo(0.415, 0.635, 0.315, 0.650);
+corbelShape.closePath();
+
+const corbelExtrude = new THREE.ExtrudeGeometry(corbelShape, {
+  depth: 0.055,
+  bevelEnabled: false
+});
+// Rotate so shape X->Z, shape Y->Y, extrude Z->X
+corbelExtrude.rotateY(Math.PI / 2);
+const corbelMesh = new THREE.Mesh(corbelExtrude, matWarmOak);
+corbelMesh.position.set(0.825, 0, 0);
+islandGroup.add(corbelMesh);
+
+// Dark speckled granite countertop overhang with curved front corner (Y = 0.675 to 0.715m)
+const graniteShape = new THREE.Shape();
+graniteShape.moveTo(0.79, 0.32);
+graniteShape.quadraticCurveTo(0.79, 0.11, 1.04, 0.11);
+graniteShape.lineTo(2.65, 0.11);
+graniteShape.lineTo(2.65, 1.12);
+graniteShape.lineTo(0.79, 1.12);
+graniteShape.closePath();
+
+const graniteGeo = new THREE.ExtrudeGeometry(graniteShape, {
+  depth: 0.038,
+  bevelEnabled: true,
+  bevelThickness: 0.006,
+  bevelSize: 0.006,
+  bevelSegments: 3
+});
+graniteGeo.rotateX(Math.PI / 2);
+const graniteMesh = new THREE.Mesh(graniteGeo, matGranite);
+graniteMesh.position.set(0, 0.712, 0);
+islandGroup.add(graniteMesh);
+
+// ----------------------------------------------------------------------------
+// 3. FAR RIGHT BACKGROUND: KITCHEN CABINETS & BACKSPLASH (Z > 1.15m)
+// ----------------------------------------------------------------------------
+const rightKitchenGroup = new THREE.Group();
+roomGroup.add(rightKitchenGroup);
+
+// Lower oak cabinets along the right wall (X = 1.65 to 3.6, Z = 1.25 to 1.85, Y = 0.08 to 0.64)
+const rightLowerCab = new THREE.Mesh(
+  new THREE.BoxGeometry(1.95, 0.56, 0.65),
+  matWarmOak
+);
+rightLowerCab.position.set(2.62, 0.36, 1.56);
+rightKitchenGroup.add(rightLowerCab);
+
+// Dark recessed toe-kick under right cabinets
+const rightToeKick = new THREE.Mesh(
+  new THREE.BoxGeometry(1.95, 0.08, 0.65),
+  new THREE.MeshStandardMaterial({ color: 0x3b2c20, roughness: 0.7 })
+);
+rightToeKick.position.set(2.62, 0.04, 1.56);
+rightKitchenGroup.add(rightToeKick);
+
+// Raised cabinet door frames on right lower cabinets (visible at right edge of Frames 1 & 2)
+for (let i = 0; i < 4; i++) {
+  const doorX = 1.82 + i * 0.36;
+  const doorFrame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.32, 0.48, 0.022),
+    matWarmOak
+  );
+  doorFrame.position.set(doorX, 0.36, 1.23);
+  rightKitchenGroup.add(doorFrame);
+
+  const doorInset = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.38, 0.026),
+    new THREE.MeshStandardMaterial({ color: 0x7c5a3c, roughness: 0.5 })
+  );
+  doorInset.position.set(doorX, 0.36, 1.23);
+  rightKitchenGroup.add(doorInset);
+}
+
+// Countertop lip on right lower cabinets
+const rightCounter = new THREE.Mesh(
+  new THREE.BoxGeometry(2.0, 0.028, 0.68),
+  new THREE.MeshStandardMaterial({ color: 0xdad5cc, roughness: 0.3 })
+);
+rightCounter.position.set(2.62, 0.654, 1.55);
+rightKitchenGroup.add(rightCounter);
+
+// Grey/white stone tile backsplash (Y = 0.66 to 1.05m) with glowing under-cabinet light & outlets
+const backsplashWall = new THREE.Mesh(
+  new THREE.BoxGeometry(2.0, 0.42, 0.04),
+  new THREE.MeshStandardMaterial({
+    map: backsplashTex,
+    emissive: 0xcfe0ea,
+    emissiveIntensity: 0.42,
+    roughness: 0.4
+  })
+);
+backsplashWall.position.set(2.55, 0.86, 1.48);
+rightKitchenGroup.add(backsplashWall);
+
+// Small white outlet plate on backsplash
+const bsOutlet = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.02), matBrightWhiteGlow);
+bsOutlet.position.set(2.38, 0.79, 1.45);
+rightKitchenGroup.add(bsOutlet);
+
+// Upper oak wall cabinet at top-right corner of Frame 1 & 2
+const rightUpperCab = new THREE.Mesh(
+  new THREE.BoxGeometry(1.6, 0.55, 0.38),
+  matWarmOak
+);
+rightUpperCab.position.set(2.35, 1.22, 1.32);
+rightKitchenGroup.add(rightUpperCab);
+
+// ----------------------------------------------------------------------------
+// 4. CENTER BACKGROUND: STAINLESS STEEL DOUBLE WALL OVEN & TALL CABINET (X = 3.8m)
+// ----------------------------------------------------------------------------
+const ovenGroup = new THREE.Group();
+roomGroup.add(ovenGroup);
+
+// Bright white vertical wall/doorframe column just to the left of the oven cabinet (Z = -0.17 to -0.05)
+const whiteWallCol = new THREE.Mesh(
+  new THREE.BoxGeometry(0.32, 2.6, 0.12),
+  matWhiteTrim
+);
+whiteWallCol.position.set(3.68, 1.3, -0.11);
+ovenGroup.add(whiteWallCol);
+
+// Extra bright baseboard on that white column
+const whiteColBase = new THREE.Mesh(
+  new THREE.BoxGeometry(0.34, 0.12, 0.13),
+  matBrightWhiteGlow
+);
+whiteColBase.position.set(3.67, 0.06, -0.11);
+ovenGroup.add(whiteColBase);
+
+// Tall wooden cabinet housing the double oven (X = 3.82, Z = -0.05 to 0.56, Y = 0 to 2.5)
+const ovenCabBody = new THREE.Mesh(
+  new THREE.BoxGeometry(0.65, 2.5, 0.61),
+  new THREE.MeshStandardMaterial({ color: 0xa6896f, roughness: 0.5 })
+);
+ovenCabBody.position.set(4.14, 1.25, 0.255);
+ovenGroup.add(ovenCabBody);
+
+// Bottom wooden drawer below the oven (Y = 0.07 to 0.28m)
+const ovenDrawerFrame = new THREE.Mesh(
+  new THREE.BoxGeometry(0.02, 0.18, 0.52),
+  new THREE.MeshStandardMaterial({ color: 0xb79c84, roughness: 0.45 })
+);
+ovenDrawerFrame.position.set(3.81, 0.175, 0.24);
+ovenGroup.add(ovenDrawerFrame);
+
+const ovenDrawerHandle = new THREE.Mesh(
+  new THREE.BoxGeometry(0.03, 0.02, 0.14),
+  new THREE.MeshBasicMaterial({ color: 0x322b26 })
+);
+ovenDrawerHandle.position.set(3.795, 0.175, 0.24);
+ovenGroup.add(ovenDrawerHandle);
+
+// Stainless steel double oven face (Y = 0.30 to 1.44m) - reflects bright daylight from left window
+const stainlessMat = new THREE.MeshStandardMaterial({
+  color: 0xf4f8fc,
+  emissive: 0xe6eff7,
+  emissiveIntensity: 0.68,
+  roughness: 0.18,
+  metalness: 0.55
+});
+const ovenStainlessPanel = new THREE.Mesh(
+  new THREE.BoxGeometry(0.02, 1.14, 0.55),
+  stainlessMat
+);
+ovenStainlessPanel.position.set(3.81, 0.87, 0.245);
+ovenGroup.add(ovenStainlessPanel);
+
+// Lower oven dark glass window (Y = 0.38 to 0.82m)
+const darkOvenGlassMat = new THREE.MeshStandardMaterial({
+  color: 0x262d36,
+  roughness: 0.12,
+  metalness: 0.8
+});
+const lowerOvenGlass = new THREE.Mesh(
+  new THREE.BoxGeometry(0.025, 0.42, 0.38),
+  darkOvenGlassMat
+);
+lowerOvenGlass.position.set(3.805, 0.59, 0.25);
+ovenGroup.add(lowerOvenGlass);
+
+// Upper microwave/oven dark window & control panel (Y = 0.96 to 1.34m)
+const upperOvenGlass = new THREE.Mesh(
+  new THREE.BoxGeometry(0.025, 0.22, 0.38),
+  darkOvenGlassMat
+);
+upperOvenGlass.position.set(3.805, 1.18, 0.25);
+ovenGroup.add(upperOvenGlass);
+
+// Oven horizontal divider bar
+const ovenDivider = new THREE.Mesh(
+  new THREE.BoxGeometry(0.03, 0.035, 0.54),
+  new THREE.MeshBasicMaterial({ color: 0x454c54 })
+);
+ovenDivider.position.set(3.802, 0.92, 0.25);
+ovenGroup.add(ovenDivider);
+
+// Upper wooden cabinet doors above the double oven (Y = 1.46 to 2.40m)
+const upperOvenCab = new THREE.Mesh(
+  new THREE.BoxGeometry(0.03, 0.92, 0.57),
+  matWarmOak
+);
+upperOvenCab.position.set(3.81, 1.92, 0.25);
+ovenGroup.add(upperOvenCab);
+
+// ----------------------------------------------------------------------------
+// 5. LEFT FOREGROUND: STAIRCASE POST, URNS/VASES, BALUSTRADE, AND BABY GATE
+// ----------------------------------------------------------------------------
+const leftStairGroup = new THREE.Group();
+roomGroup.add(leftStairGroup);
+
+// Carpeted stair step at far bottom-left of Frame 1 & 2 (X = 0.05 to 0.36, Z = -0.31 to -0.65)
+const carpetMat = new THREE.MeshStandardMaterial({
+  color: 0xb8b4ac,
+  emissive: 0x8a867e,
+  emissiveIntensity: 0.28,
+  roughness: 0.9
+});
+const stairStep1 = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.22, 0.35), carpetMat);
+stairStep1.position.set(0.20, 0.11, -0.46);
+leftStairGroup.add(stairStep1);
+
+const stairStep2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.44, 0.35), carpetMat);
+stairStep2.position.set(0.14, 0.22, -0.52);
+leftStairGroup.add(stairStep2);
+
+// Warm honey-oak foreground stair stringer / angled wooden post (X = 0.36, Z = -0.295)
+// Slopes slightly outward (-Z) as it goes up, matching Frame 1 & Frame 2 left edge!
+const fgPostGroup = new THREE.Group();
+fgPostGroup.position.set(0.36, 0.0, -0.295);
+fgPostGroup.rotation.x = -0.14; // tilts slightly left as it rises
+leftStairGroup.add(fgPostGroup);
+
+const fgPostMain = new THREE.Mesh(
+  new THREE.BoxGeometry(0.095, 1.15, 0.075),
+  matWarmOak
+);
+fgPostMain.position.set(0, 0.55, 0);
+fgPostGroup.add(fgPostMain);
+
+const fgPostTrim = new THREE.Mesh(
+  new THREE.BoxGeometry(0.105, 1.15, 0.032),
+  new THREE.MeshStandardMaterial({ color: 0x7b5636, roughness: 0.5 })
+);
+fgPostTrim.position.set(-0.02, 0.55, -0.045);
+fgPostGroup.add(fgPostTrim);
+
+// Two weathered stone/ceramic amphora vases standing inside the railing (X = 0.50 & 0.72, Z = -0.31)
+const matStoneUrn = new THREE.MeshStandardMaterial({
+  map: stoneUrnTex,
+  roughness: 0.72,
+  metalness: 0.05
+});
+
+// Urn 1 (taller bulbous urn on tripod stand at X = 0.50, Z = -0.33)
+const urn1Pts = [
+  new THREE.Vector2(0.000, 0.08),
+  new THREE.Vector2(0.048, 0.09),
+  new THREE.Vector2(0.068, 0.22),
+  new THREE.Vector2(0.112, 0.38),
+  new THREE.Vector2(0.098, 0.49),
+  new THREE.Vector2(0.052, 0.55),
+  new THREE.Vector2(0.068, 0.59),
+  new THREE.Vector2(0.055, 0.59)
+];
+const urn1Mesh = new THREE.Mesh(new THREE.LatheGeometry(urn1Pts, 24), matStoneUrn);
+urn1Mesh.position.set(0.50, 0.0, -0.33);
+leftStairGroup.add(urn1Mesh);
+
+// Dark iron tripod stand under Urn 1
+for (let a = 0; a < 3; a++) {
+  const legStand = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.008, 0.010, 0.16, 8),
+    matIron
+  );
+  const ang = (a * Math.PI * 2) / 3;
+  legStand.position.set(0.50 + Math.cos(ang) * 0.04, 0.075, -0.33 + Math.sin(ang) * 0.04);
+  leftStairGroup.add(legStand);
+}
+
+// Vase 2 (amphora vase at X = 0.72, Z = -0.31 - visible in Frames 1, 2, and at left edge of Frame 3!)
+const vase2Pts = [
+  new THREE.Vector2(0.000, 0.000),
+  new THREE.Vector2(0.062, 0.002),
+  new THREE.Vector2(0.054, 0.065),
+  new THREE.Vector2(0.078, 0.180),
+  new THREE.Vector2(0.098, 0.295),
+  new THREE.Vector2(0.084, 0.365),
+  new THREE.Vector2(0.044, 0.415),
+  new THREE.Vector2(0.046, 0.460),
+  new THREE.Vector2(0.066, 0.485),
+  new THREE.Vector2(0.055, 0.488)
+];
+const vase2Mesh = new THREE.Mesh(new THREE.LatheGeometry(vase2Pts, 24), matStoneUrn);
+vase2Mesh.position.set(0.72, 0.0, -0.31);
+leftStairGroup.add(vase2Mesh);
+
+// Staircase Balustrade running from (X = 0.38, Z = -0.35) to (X = 1.84, Z = -1.026)
+const railStart = new THREE.Vector3(0.38, 0.0, -0.35);
+const railEnd = new THREE.Vector3(1.84, 0.0, -1.026);
+const railVec = new THREE.Vector3().subVectors(railEnd, railStart);
+const railLen = railVec.length();
+const railYaw = Math.atan2(-railVec.z, railVec.x);
+
+// Bottom wooden shoe rail
+const bottomRailGeo = new THREE.BoxGeometry(railLen, 0.028, 0.045);
+const bottomRail = new THREE.Mesh(bottomRailGeo, matWarmOak);
+bottomRail.position.set(
+  0.5 * (railStart.x + railEnd.x),
+  0.016,
+  0.5 * (railStart.z + railEnd.z)
+);
+bottomRail.rotation.y = railYaw;
+leftStairGroup.add(bottomRail);
+
+// Top sloped wooden handrail (starts at Y = 0.88m at X = 0.38, ends at Y = 0.68m at X = 1.84)
+const topStart = new THREE.Vector3(0.38, 0.88, -0.35);
+const topEnd = new THREE.Vector3(1.84, 0.68, -1.026);
+const topDiff = new THREE.Vector3().subVectors(topEnd, topStart);
+const topRailGeo = new THREE.BoxGeometry(topDiff.length(), 0.042, 0.058);
+const topRail = new THREE.Mesh(topRailGeo, matWarmOak);
+topRail.position.copy(topStart).addScaledVector(topDiff, 0.5);
+topRail.rotation.y = railYaw;
+topRail.rotation.z = Math.atan2(topDiff.y, railLen);
+leftStairGroup.add(topRail);
+
+// Wrought-iron vertical balusters (spindles) with decorative middle twists
+const numSpindles = 16;
+const spindleRodGeo = new THREE.CylinderGeometry(0.0065, 0.0065, 1.0, 8);
+const knuckleGeo = new THREE.OctahedronGeometry(0.017, 0);
+
+for (let i = 1; i < numSpindles; i++) {
+  const u = i / numSpindles;
+  const sx = railStart.x + (railEnd.x - railStart.x) * u;
+  const sz = railStart.z + (railEnd.z - railStart.z) * u;
+  const topY = 0.88 + (0.68 - 0.88) * u;
+  const sh = topY - 0.02;
+
+  const spindle = new THREE.Mesh(spindleRodGeo, matIron);
+  spindle.scale.set(1, sh, 1);
+  spindle.position.set(sx, 0.02 + sh * 0.5, sz);
+  leftStairGroup.add(spindle);
+
+  // Decorative twist/knuckle ornament on spindles
+  if (i % 2 === 1) {
+    const k1 = new THREE.Mesh(knuckleGeo, matIron);
+    k1.scale.set(0.8, 1.8, 0.8);
+    k1.position.set(sx, 0.02 + sh * 0.48, sz);
+    leftStairGroup.add(k1);
+  } else {
+    const k2 = new THREE.Mesh(knuckleGeo, matIron);
+    k2.scale.set(0.75, 1.5, 0.75);
+    k2.position.set(sx, 0.02 + sh * 0.34, sz);
+    leftStairGroup.add(k2);
+    const k3 = new THREE.Mesh(knuckleGeo, matIron);
+    k3.scale.set(0.75, 1.5, 0.75);
+    k3.position.set(sx, 0.02 + sh * 0.66, sz);
+    leftStairGroup.add(k3);
+  }
+}
+
+// Descending staircase handrail visible behind the iron balusters (Frames 2, 3, 4)
+const descRailStart = new THREE.Vector3(0.65, 0.12, -0.58);
+const descRailEnd = new THREE.Vector3(1.55, 0.66, -1.05);
+const descDiff = new THREE.Vector3().subVectors(descRailEnd, descRailStart);
+const descRail = new THREE.Mesh(
+  new THREE.BoxGeometry(descDiff.length(), 0.042, 0.048),
+  matWarmOak
+);
+descRail.position.copy(descRailStart).addScaledVector(descDiff, 0.5);
+descRail.rotation.y = Math.atan2(-descDiff.z, descDiff.x);
+descRail.rotation.z = Math.atan2(descDiff.y, Math.hypot(descDiff.x, descDiff.z));
+leftStairGroup.add(descRail);
+
+// Bright white stairwell lower wall visible behind the balusters (X = 1.05 to 1.84, Z = -1.18)
+const stairwellBackWall = new THREE.Mesh(
+  new THREE.BoxGeometry(1.15, 0.55, 0.05),
+  new THREE.MeshStandardMaterial({
+    color: 0xdbe6f2,
+    emissive: 0xc8daec,
+    emissiveIntensity: 0.55,
+    roughness: 0.4
+  })
+);
+stairwellBackWall.position.set(1.42, 0.26, -0.98);
+stairwellBackWall.rotation.y = railYaw;
+leftStairGroup.add(stairwellBackWall);
+
+// Wooden newel post at the end of the stair railing (X = 1.84, Z = -1.026)
+const newelPost = new THREE.Mesh(
+  new THREE.BoxGeometry(0.088, 0.82, 0.088),
+  matWarmOak
+);
+newelPost.position.set(1.84, 0.41, -1.026);
+leftStairGroup.add(newelPost);
+
+const newelCap = new THREE.Mesh(
+  new THREE.BoxGeometry(0.112, 0.036, 0.112),
+  matWarmOak
+);
+newelCap.position.set(1.84, 0.83, -1.026);
+leftStairGroup.add(newelCap);
+
+// ----------------------------------------------------------------------------
+// 6. WHITE VERTICAL-SLATTED BABY GATE (X = 1.84..1.89, Z = -1.026..-0.747)
+// ----------------------------------------------------------------------------
+const gateGroup = new THREE.Group();
+roomGroup.add(gateGroup);
+
+const gateStart = new THREE.Vector3(1.84, 0.0, -1.026);
+const gateEnd = new THREE.Vector3(1.89, 0.0, -0.747);
+const gateVec = new THREE.Vector3().subVectors(gateEnd, gateStart);
+const gateWidth = gateVec.length();
+const gateH = 0.58;
+const gateMid = new THREE.Vector3().copy(gateStart).addScaledVector(gateVec, 0.5);
+const gateYaw = Math.atan2(gateVec.x, gateVec.z);
+
+const gateContainer = new THREE.Group();
+gateContainer.position.set(gateMid.x, 0, gateMid.z);
+gateContainer.rotation.y = gateYaw;
+gateGroup.add(gateContainer);
+
+const matBabyGate = new THREE.MeshStandardMaterial({
+  color: 0xf4f9ff,
+  emissive: 0xdcebf8,
+  emissiveIntensity: 0.52,
+  roughness: 0.3
+});
+
+// Outer white frame of the baby gate
+const gateBotBar = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.042, gateWidth), matBabyGate);
+gateBotBar.position.set(0, 0.021, 0);
+gateContainer.add(gateBotBar);
+
+const gateTopBar = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.042, gateWidth), matBabyGate);
+gateTopBar.position.set(0, gateH - 0.021, 0);
+gateContainer.add(gateTopBar);
+
+const gateLeftPost = new THREE.Mesh(new THREE.BoxGeometry(0.030, gateH, 0.036), matBabyGate);
+gateLeftPost.position.set(0, gateH * 0.5, -gateWidth * 0.5 + 0.018);
+gateContainer.add(gateLeftPost);
+
+const gateRightPost = new THREE.Mesh(new THREE.BoxGeometry(0.030, gateH, 0.036), matBabyGate);
+gateRightPost.position.set(0, gateH * 0.5, gateWidth * 0.5 - 0.018);
+gateContainer.add(gateRightPost);
+
+// 6 vertical white slats inside the baby gate
+const numGateBars = 6;
+for (let i = 1; i <= numGateBars; i++) {
+  const bz = -gateWidth * 0.5 + (i / (numGateBars + 1)) * gateWidth;
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.020, gateH - 0.04, 0.018), matBabyGate);
+  bar.position.set(0, gateH * 0.5, bz);
+  gateContainer.add(bar);
+}
+
+// ----------------------------------------------------------------------------
+// 7. HALLWAY BEHIND THE BABY GATE: CLOSET DOORS, MIRROR, CONSOLE, CHANDELIER
+// ----------------------------------------------------------------------------
+const hallwayGroup = new THREE.Group();
+roomGroup.add(hallwayGroup);
+
+// Upper beige wall above the staircase & baby gate (X = 0.2 to 2.2, Z = -1.25, Y = 0.6 to 2.6)
+const upperLeftWall = new THREE.Mesh(
+  new THREE.BoxGeometry(2.2, 2.2, 0.08),
+  new THREE.MeshStandardMaterial({
+    color: 0xa8a18e,
+    emissive: 0x6e685b,
+    emissiveIntensity: 0.35,
+    roughness: 0.75
+  })
+);
+upperLeftWall.position.set(1.25, 1.55, -1.18);
+upperLeftWall.rotation.y = 0.28;
+hallwayGroup.add(upperLeftWall);
+
+// White paneled double closet doors on the left wall of the hallway (X = 1.92 to 3.15, Z = -0.76 to -1.05)
+const closetGroup = new THREE.Group();
+closetGroup.position.set(2.52, 0, -0.90);
+closetGroup.rotation.y = 0.23;
+hallwayGroup.add(closetGroup);
+
+const closetDoorMat = new THREE.MeshStandardMaterial({
+  color: 0xe6eff8,
+  emissive: 0xc2d5e8,
+  emissiveIntensity: 0.45,
+  roughness: 0.32
+});
+const closetMain = new THREE.Mesh(new THREE.BoxGeometry(1.18, 1.68, 0.04), closetDoorMat);
+closetMain.position.set(0, 0.84, 0);
+closetGroup.add(closetMain);
+
+// Bright window-reflection highlight patch across the middle of the white closet doors
+const closetGlowPatch = new THREE.Mesh(
+  new THREE.BoxGeometry(1.12, 0.46, 0.046),
+  new THREE.MeshBasicMaterial({ color: 0xf6fbff })
+);
+closetGlowPatch.position.set(0, 0.78, 0);
+closetGroup.add(closetGlowPatch);
+
+// Dark closet door handles & recessed panel lines
+const doorHandle = new THREE.Mesh(
+  new THREE.BoxGeometry(0.12, 0.025, 0.06),
+  new THREE.MeshBasicMaterial({ color: 0x1c2026 })
+);
+doorHandle.position.set(-0.04, 0.68, 0.01);
+closetGroup.add(doorHandle);
+
+for (const px of [-0.28, 0.28]) {
+  const lowerPanelOutline = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 0.48, 0.044),
+    new THREE.MeshStandardMaterial({ color: 0xc4d2e0, roughness: 0.4 })
+  );
+  lowerPanelOutline.position.set(px, 0.34, 0);
+  closetGroup.add(lowerPanelOutline);
+}
+
+// Further down the left hallway wall (X = 3.2 to 5.8, Z = -1.05 to -1.35)
+const farLeftWall = new THREE.Mesh(
+  new THREE.BoxGeometry(2.8, 2.5, 0.06),
+  new THREE.MeshStandardMaterial({
+    color: 0x9b9585,
+    emissive: 0x625d52,
+    emissiveIntensity: 0.3,
+    roughness: 0.7
+  })
+);
+farLeftWall.position.set(4.5, 1.25, -1.22);
+farLeftWall.rotation.y = 0.14;
+hallwayGroup.add(farLeftWall);
+
+// Dark open doorway on the left hallway wall (X = 3.45, Z = -1.08)
+const darkDoorway = new THREE.Mesh(
+  new THREE.BoxGeometry(0.38, 1.65, 0.08),
+  new THREE.MeshBasicMaterial({ color: 0x222428 })
+);
+darkDoorway.position.set(3.45, 0.825, -1.06);
+darkDoorway.rotation.y = 0.14;
+hallwayGroup.add(darkDoorway);
+
+// Round dark decorative wall mirror on the left hallway wall (X = 4.45, Y = 1.15, Z = -1.16)
+const wallMirrorOuter = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.28, 0.28, 0.03, 24),
+  new THREE.MeshStandardMaterial({ color: 0x26282a, roughness: 0.3, metalness: 0.6 })
+);
+wallMirrorOuter.rotation.x = Math.PI / 2;
+wallMirrorOuter.rotation.z = -0.14;
+wallMirrorOuter.position.set(4.45, 1.15, -1.16);
+hallwayGroup.add(wallMirrorOuter);
+
+const wallMirrorInner = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.18, 0.18, 0.036, 20),
+  new THREE.MeshBasicMaterial({ color: 0x707c88 })
+);
+wallMirrorInner.rotation.x = Math.PI / 2;
+wallMirrorInner.rotation.z = -0.14;
+wallMirrorInner.position.set(4.45, 1.15, -1.16);
+hallwayGroup.add(wallMirrorInner);
+
+// Far hallway back wall (X = 6.2, Z = -1.4 to -0.1)
+const farHallBackWall = new THREE.Mesh(
+  new THREE.BoxGeometry(0.08, 2.6, 1.5),
+  new THREE.MeshStandardMaterial({
+    color: 0x8d887b,
+    emissive: 0x5c584f,
+    emissiveIntensity: 0.35,
+    roughness: 0.75
+  })
+);
+farHallBackWall.position.set(6.1, 1.3, -0.72);
+hallwayGroup.add(farHallBackWall);
+
+// Two small dark-framed pictures on the far hallway back wall
+for (const py of [1.14, 1.34]) {
+  const frameBox = new THREE.Mesh(
+    new THREE.BoxGeometry(0.03, 0.15, 0.20),
+    new THREE.MeshBasicMaterial({ color: 0x2c2824 })
+  );
+  frameBox.position.set(5.98, py, -0.82);
+  hallwayGroup.add(frameBox);
+
+  const matInner = new THREE.Mesh(
+    new THREE.BoxGeometry(0.034, 0.10, 0.14),
+    new THREE.MeshBasicMaterial({ color: 0xc2bcb0 })
+  );
+  matInner.position.set(5.98, py, -0.82);
+  hallwayGroup.add(matInner);
+}
+
+// Wooden display/curio cabinet at the far end of the hallway (X = 5.45, Z = -0.52, Y = 0 to 1.08)
+const curioCab = new THREE.Mesh(
+  new THREE.BoxGeometry(0.45, 1.08, 0.42),
+  new THREE.MeshStandardMaterial({ color: 0x6b533e, roughness: 0.55 })
+);
+curioCab.position.set(5.45, 0.54, -0.52);
+hallwayGroup.add(curioCab);
+
+// Glass display window inside the curio cabinet
+const curioGlass = new THREE.Mesh(
+  new THREE.BoxGeometry(0.46, 0.68, 0.26),
+  new THREE.MeshBasicMaterial({ color: 0x35322e })
+);
+curioGlass.position.set(5.44, 0.56, -0.52);
+hallwayGroup.add(curioGlass);
+
+// Table lamp with dark flared shade on top of the curio cabinet (Y = 1.08 to 1.68m)
+const lampBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.04, 0.08, 0.32, 12),
+  new THREE.MeshStandardMaterial({ color: 0x947c5c, roughness: 0.4, metalness: 0.4 })
+);
+lampBase.position.set(5.38, 1.24, -0.52);
+hallwayGroup.add(lampBase);
+
+const lampShade = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.11, 0.24, 0.28, 16),
+  new THREE.MeshStandardMaterial({ color: 0x3e3a36, roughness: 0.8 })
+);
+lampShade.position.set(5.38, 1.52, -0.52);
+hallwayGroup.add(lampShade);
+
+// Hallway ceiling (Y = 2.65m)
+const hallCeiling = new THREE.Mesh(
+  new THREE.BoxGeometry(6.5, 0.08, 2.2),
+  new THREE.MeshStandardMaterial({
+    color: 0x949186,
+    emissive: 0x6c6960,
+    emissiveIntensity: 0.42,
+    roughness: 0.8
+  })
+);
+hallCeiling.position.set(3.2, 2.68, -0.75);
+hallwayGroup.add(hallCeiling);
+
+// Lighter ceiling soffit beam at the top of the frame
+const ceilingSoffit = new THREE.Mesh(
+  new THREE.BoxGeometry(2.5, 0.16, 0.85),
+  new THREE.MeshBasicMaterial({ color: 0xc8c6ba })
+);
+ceilingSoffit.position.set(3.4, 2.62, -0.55);
+hallwayGroup.add(ceilingSoffit);
+
+// Black wrought-iron 6-arm chandelier hanging in the hallway (X = 3.87, Y = 2.22, Z = -0.95)
+const chandGroup = new THREE.Group();
+chandGroup.position.set(3.87, 2.22, -0.95);
+hallwayGroup.add(chandGroup);
+
+const chandStem = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.014, 0.014, 0.48, 8),
+  matIron
+);
+chandStem.position.y = 0.16;
+chandGroup.add(chandStem);
+
+const chandHub = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 10), matIron);
+chandHub.position.y = -0.06;
+chandGroup.add(chandHub);
+
+for (let a = 0; a < 6; a++) {
+  const ang = (a * Math.PI * 2) / 6;
+  const armGroup = new THREE.Group();
+  armGroup.rotation.y = ang;
+  chandGroup.add(armGroup);
+
+  const armCurve = new THREE.Mesh(
+    new THREE.TorusGeometry(0.13, 0.008, 8, 16, Math.PI * 0.85),
+    matIron
+  );
+  armCurve.position.set(0.13, -0.02, 0);
+  armCurve.rotation.z = Math.PI * 1.08;
+  armGroup.add(armCurve);
+
+  const socket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.016, 0.012, 0.055, 8),
+    matIron
+  );
+  socket.position.set(0.25, 0.03, 0);
+  armGroup.add(socket);
+}
+
+// ----------------------------------------------------------------------------
+// 8. FLOOR AND PLANAR MIRRORED REFLECTION GROUP
+// ----------------------------------------------------------------------------
+// Clone the static room geometry and invert along Y so that every barstool leg,
+// the white baby gate, the stair post, and the kitchen island reflect vertically
+// into the glossy dark hardwood floor!
+const reflectionGroup = roomGroup.clone(true);
+reflectionGroup.scale.y = -1;
+reflectionGroup.position.y = -0.002;
+worldRoot.add(reflectionGroup);
+
+// Semi-transparent dark espresso/walnut hardwood floor plane at Y = 0
+const floorTextures = createHardwoodFloorTextures();
+const floorMat = new THREE.MeshStandardMaterial({
+  map: floorTextures.map,
+  bumpMap: floorTextures.bumpMap,
+  bumpScale: 0.0035,
+  roughnessMap: floorTextures.roughMap,
+  roughness: 0.24,
+  metalness: 0.06,
+  transparent: true,
+  opacity: 0.81 // Lets 19% of the true 3D inverted reflection show through the dark wood!
+});
+
+const floorGeo = new THREE.PlaneGeometry(12, 8);
+floorGeo.rotateX(-Math.PI / 2);
+const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+floorMesh.position.set(3.2, 0.0, 0.0);
+floorMesh.receiveShadow = true;
+worldRoot.add(floorMesh);
+
+// Deep sub-floor dark blocker so nothing leaks from below the reflection
+const subFloor = new THREE.Mesh(
+  floorGeo,
+  new THREE.MeshBasicMaterial({ color: 0x1e1612 })
+);
+subFloor.position.set(3.2, -2.8, 0.0);
+worldRoot.add(subFloor);
+
+// ============================================================================
+// LIGHTING (Matched to the indoor daytime kitchen/hallway reference frames)
+// ============================================================================
+const hemiLight = new THREE.HemisphereLight(0xf6f4ee, 0x5c4738, 1.35);
+scene.add(hemiLight);
+
+// Bright window daylight coming from the left hallway / stairwell onto the island & stools
+const windowDirLight = new THREE.DirectionalLight(0xfffaf2, 1.55);
+windowDirLight.position.set(0.2, 1.85, -1.8);
+windowDirLight.target.position.set(1.2, 0.35, 0.6);
+scene.add(windowDirLight);
+scene.add(windowDirLight.target);
+
+// Warm indoor kitchen fill light from above/front
+const kitchenPointLight = new THREE.PointLight(0xffeedd, 1.6, 6.0, 1.2);
+kitchenPointLight.position.set(0.55, 1.25, 0.15);
+scene.add(kitchenPointLight);
+
+// Bright hallway/oven specular light creating the vertical floor highlight streak at Z ≈ -0.04m
+const hallStreakLight = new THREE.PointLight(0xeef7ff, 2.2, 8.0, 1.1);
+hallStreakLight.position.set(3.55, 0.42, -0.08);
+scene.add(hallStreakLight);
+
+// Soft fill light for the foreground floor & lower barstool legs
+const lowFillLight = new THREE.PointLight(0xe8d9cb, 0.85, 3.5, 1.4);
+lowFillLight.position.set(0.2, 0.32, 0.05);
+scene.add(lowFillLight);
+
+// ============================================================================
+// DELIVERY ROBOT MODEL (Visible in cam=chase)
+// ============================================================================
+function createDeliveryRobot() {
+  const robot = new THREE.Group();
+
+  // Main white/grey body (~0.70 x 0.50 x 0.55 m)
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf0f2f5, roughness: 0.35, metalness: 0.1 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x2c3036, roughness: 0.5, metalness: 0.3 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1c1e, roughness: 0.8 });
+  const flagMat = new THREE.MeshStandardMaterial({
+    color: 0xff5a1f,
+    emissive: 0xff4500,
+    emissiveIntensity: 0.4,
+    roughness: 0.4
+  });
+
+  // Lower chassis
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.16, 0.46), trimMat);
+  chassis.position.set(0, 0.14, 0);
+  robot.add(chassis);
+
+  // Upper white cargo bin
+  const cargoBox = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.34, 0.44), bodyMat);
+  cargoBox.position.set(-0.01, 0.38, 0);
+  robot.add(cargoBox);
+
+  // Lid
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.04, 0.46), trimMat);
+  lid.position.set(-0.01, 0.56, 0);
+  robot.add(lid);
+
+  // Front sensor visor & camera lens
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.10, 0.36), trimMat);
+  visor.position.set(0.32, 0.38, 0);
+  robot.add(visor);
+
+  // Two LED headlights
+  const headMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (const hz of [-0.14, 0.14]) {
+    const hl = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 10), headMat);
+    hl.position.set(0.34, 0.24, hz);
+    robot.add(hl);
+  }
+
+  // 6 wheels (3 per side)
+  const wheelGeo = new THREE.CylinderGeometry(0.085, 0.085, 0.045, 20);
+  wheelGeo.rotateX(Math.PI / 2);
+  for (const wx of [-0.22, 0.0, 0.22]) {
+    for (const wz of [-0.24, 0.24]) {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(wx, 0.085, wz);
+      robot.add(w);
+    }
+  }
+
+  // Tall whip antenna with orange safety flag
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.008, 0.75, 8), trimMat);
+  mast.position.set(-0.24, 0.92, -0.16);
+  robot.add(mast);
+
+  const flag = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.008), flagMat);
+  flag.position.set(-0.33, 1.22, -0.16);
+  robot.add(flag);
+
+  return robot;
+}
+
+const robotMesh = createDeliveryRobot();
+worldRoot.add(robotMesh);
+
+// ============================================================================
+// TRAJECTORY INTERPOLATION & SEEK(T) CONTRACT
+// ============================================================================
+let trajData = FALLBACK_TRAJ;
+window.duration = 2.72;
+let currentTime = 0.0;
+
+function sampleTrajectory(t) {
+  const frames = trajData.frames;
+  if (!frames || frames.length === 0) {
+    return { x: 0, y: 0, z: 0.15, yaw: 0 };
+  }
+  if (t <= frames[0].t) return { ...frames[0] };
+  if (t >= frames[frames.length - 1].t) return { ...frames[frames.length - 1] };
+
+  // Binary search
+  let lo = 0, hi = frames.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (frames[mid].t <= t) lo = mid;
+    else hi = mid;
+  }
+  const f0 = frames[lo];
+  const f1 = frames[hi];
+  const span = f1.t - f0.t;
+  const u = span > 1e-6 ? (t - f0.t) / span : 0;
+
+  let dyaw = f1.yaw - f0.yaw;
+  while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+  while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+
+  return {
+    t,
+    x: f0.x + (f1.x - f0.x) * u,
+    y: f0.y + (f1.y - f0.y) * u,
+    z: (f0.z ?? 0.15) + ((f1.z ?? 0.15) - (f0.z ?? 0.15)) * u,
+    yaw: f0.yaw + dyaw * u
+  };
+}
+
+function poseSceneAtTime(t) {
+  currentTime = Math.max(0, Math.min(t, window.duration));
+  const pose = sampleTrajectory(currentTime);
+
+  // Convert sim (x, y, z) -> Three.js (x, z, -y)
+  const rx = pose.x;
+  const rz = -pose.y;
+  const ry = pose.z ?? 0.15;
+  const yaw = pose.yaw || 0;
+
+  // Pose delivery robot mesh (for chase cam)
+  robotMesh.position.set(rx, Math.max(0, ry - 0.15), rz);
+  robotMesh.rotation.set(0, yaw, 0);
+
+  // If t > 1.7s in chase cam, show slight right-wheel climb/left-roll as it contacts the barstool
+  if (currentTime > 1.65) {
+    const climb = Math.min(1, (currentTime - 1.65) / 0.45);
+    robotMesh.rotation.x = -0.18 * climb;
+  }
+
+  // Camera position & orientation
+  // Smooth startup offset (0.11 * exp(-t * 4.5)) ensures Frame 1 (t=0) and Frames 2,3,4
+  // match the exact optical distance to Stool 1 in the real footage.
+  const camX = rx + 0.11 * Math.exp(-currentTime * 4.5);
+  const camZ = rz;
+  const camY = 0.142;
+
+  robotCamera.position.set(camX, camY, camZ);
+  robotCamera.rotation.order = 'YXZ';
+  // Facing +X in Three.js corresponds to rotation.y = -Math.PI/2 + yaw
+  robotCamera.rotation.y = -Math.PI / 2 + yaw;
+  robotCamera.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+  robotCamera.rotation.z = 0;
+  robotCamera.updateMatrixWorld(true);
+
+  // Chase camera: behind and above the robot
+  const backDist = 1.45;
+  const chaseX = rx - Math.cos(yaw) * backDist;
+  const chaseZ = rz + Math.sin(yaw) * backDist - 0.18;
+  chaseCamera.position.set(chaseX, 0.82, chaseZ);
+  chaseCamera.lookAt(rx + 0.45, 0.25, rz + 0.05);
+  chaseCamera.updateMatrixWorld(true);
+
+  // Toggle robot mesh visibility so it never occludes the robot camera
+  robotMesh.visible = (camMode === 'chase');
+  activeCamera = (camMode === 'chase') ? chaseCamera : robotCamera;
+  renderPass.camera = activeCamera;
+
+  // Update post-processing uniforms (motion blur starts once the robot is moving)
+  const motionAmt = currentTime < 0.12 ? 0.0 : Math.min(1.0, (currentTime - 0.12) / 0.25);
+  gradePass.uniforms.uTime.value = currentTime;
+  gradePass.uniforms.uMotionBlur.value = motionAmt;
+  gradePass.uniforms.uIsRobotCam.value = (camMode === 'robot') ? 1.0 : 0.0;
+}
+
+window.seek = function(t) {
+  poseSceneAtTime(t);
+  composer.render();
+  if (!isCapture) {
+    document.getElementById('timeSlider').value = currentTime;
+    document.getElementById('timeLabel').textContent = currentTime.toFixed(3) + 's';
+  }
+};
+
+// ============================================================================
+// UI CONTROLS & RESIZE HANDLING
+// ============================================================================
+let isPlaying = !isCapture;
+let lastFrameWallTime = performance.now();
+
+const playBtn = document.getElementById('playBtn');
+const timeSlider = document.getElementById('timeSlider');
+const camBtn = document.getElementById('camBtn');
+const pitchSlider = document.getElementById('pitchSlider');
+const pitchLabel = document.getElementById('pitchLabel');
+
+playBtn.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+  lastFrameWallTime = performance.now();
+});
+
+timeSlider.addEventListener('input', (e) => {
+  isPlaying = false;
+  playBtn.textContent = 'Play';
+  window.seek(parseFloat(e.target.value));
+});
+
+camBtn.addEventListener('click', () => {
+  camMode = camMode === 'robot' ? 'chase' : 'robot';
+  camBtn.textContent = camMode === 'robot' ? 'Cam: Robot' : 'Cam: Chase';
+  window.seek(currentTime);
+});
+camBtn.textContent = camMode === 'robot' ? 'Cam: Robot' : 'Cam: Chase';
+
+pitchSlider.addEventListener('input', (e) => {
+  pitchDeg = parseFloat(e.target.value);
+  pitchLabel.textContent = pitchDeg.toFixed(1) + '°';
+  window.seek(currentTime);
+});
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  chaseCamera.aspect = w / h;
+  chaseCamera.updateProjectionMatrix();
+  window.seek(currentTime);
+});
+
+// ============================================================================
+// INITIALIZE & LOAD TRAJECTORY
+// ============================================================================
+async function init() {
+  if (trajUrl) {
+    try {
+      const resp = await fetch(trajUrl);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json && Array.isArray(json.frames) && json.frames.length > 0) {
+          trajData = json;
+        }
+      }
+    } catch (err) {
+      console.warn('Using embedded fallback trajectory:', err);
+    }
+  }
+
+  const frames = trajData.frames;
+  window.duration = frames[frames.length - 1].t;
+  timeSlider.max = window.duration;
+
+  // Render initial frame at t = 0.0 and mark ready
+  window.seek(0.0);
+  window.__ready = true;
+
+  if (!isCapture) {
+    requestAnimationFrame(animateLoop);
+  }
+}
+
+function animateLoop(now) {
+  requestAnimationFrame(animateLoop);
+  if (!isPlaying) return;
+  const dt = Math.min(0.1, (now - lastFrameWallTime) / 1000);
+  lastFrameWallTime = now;
+
+  let nextT = currentTime + dt;
+  if (nextT > window.duration) nextT = 0.0;
+  window.seek(nextT);
+}
+
+init();
+</script>
+</body>
+</html>

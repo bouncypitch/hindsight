@@ -1,0 +1,90 @@
+[14:03:18] Argon: diagnosing the real clip (video + sensors)
+[14:04:09]   rollover at t=8.1s, confidence 0.85: The robot's left wheels collided with and climbed up the wooden chair/table legs on the left side of its path. After an initial stop and two brief aborted pushes, a final forward lunge drove the left side high up the furniture leg until the robot rolled ~90 degrees onto its right side (reaching the tipping point at ~8.1–8.25 s in the video, corresponding to t = 6.94–7.14 s in the IMU log where ay_g rises to 0.55–0.83 g and az_g drops below 0.3 g before settling at ay_g ≈ 0.97 g, az_g ≈ -0.06 g).
+[14:04:09] Argon: building a twin that reproduces the failure
+[14:04:10] twin_v1: REPRODUCED  twin reproduces the collision (min clearance -0.005 m)  (h=0.20 angle=0 v=0.25)
+[14:04:11] Argon: planning 40 variants
+[14:04:57] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:17:02]   rollover at t=8.1s, confidence 0.85: The robot's left wheels collided with and climbed up the wooden chair/table legs on the left side of its path. After an initial stop and two brief aborted pushes, a final forward lunge drove the left side high up the furniture leg until the robot rolled ~90 degrees onto its right side (reaching the tipping point at ~8.1–8.25 s in the video, corresponding to t = 6.94–7.14 s in the IMU log where ay_g rises to 0.55–0.83 g and az_g drops below 0.3 g before settling at ay_g ≈ 0.97 g, az_g ≈ -0.06 g).
+[14:17:03] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:17:10] gen  0  reward -105.08  success 20%  edge_speed 0.36  edge_heading 7°  impact 33
+[14:17:16] gen  1  reward  -82.65  success 28%  edge_speed 0.29  edge_heading 9°  impact 33
+[14:17:21] gen  2  reward  -94.77  success 25%  edge_speed 0.36  edge_heading 7°  impact 33
+[14:17:25] gen  3  reward  -98.64  success 25%  edge_speed 0.64  edge_heading 8°  impact 31
+[14:17:30] gen  4  reward  -28.16  success 42%  edge_speed 0.16  edge_heading 16°  impact 33
+[14:17:34] gen  5  reward  -33.37  success 38%  edge_speed 0.20  edge_heading 14°  impact 33
+[14:17:39] gen  6  reward  -46.36  success 32%  edge_speed 0.21  edge_heading 13°  impact 33
+[14:17:43] gen  7  reward  -48.66  success 45%  edge_speed 0.26  edge_heading 11°  impact 33
+[14:17:48] gen  8  reward  -18.94  success 48%  edge_speed 0.15  edge_heading 18°  impact 33
+[14:17:53] gen  9  reward  -18.19  success 48%  edge_speed 0.19  edge_heading 22°  impact 33
+[14:17:57] gen 10  reward  -16.36  success 45%  edge_speed 0.20  edge_heading 18°  impact 33
+[14:18:02] gen 11  reward  -17.48  success 57%  edge_speed 0.32  edge_heading 13°  impact 31
+[14:18:07] gen 12  reward  -22.88  success 57%  edge_speed 0.30  edge_heading 12°  impact 33
+[14:18:12] gen 13  reward  -17.25  success 48%  edge_speed 0.19  edge_heading 22°  impact 33
+[14:18:17] gen 14  reward  -11.91  success 48%  edge_speed 0.19  edge_heading 20°  impact 33
+[14:18:22]   success 20% -> 48%
+[14:18:22] Argon: verifying the new policy against the real failure
+[14:19:38]   fixes=False hacking=True ship=False The policy exploits the reward hierarchy by creeping forward slightly in the first second (avoiding the simulator's `stalled` flag) and then parking stationary right in front of the pole until episode timeout. Because timeout only costs -25 while colliding costs -110, near-misses cost -45, and steering around the obstacle incurs clearance (< 0.85 m), lateral drift (|y| > 0.25 m), and heading-error (> 5 deg) penalties, the agent scores much higher by freezing in place and collecting smoothness/stability bonuses than by maneuvering around the obstacle.
+[14:19:39]   reward check reward_round2.py: PASS ok
+[14:19:39]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:19:39] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:19:44] gen  0  reward  -95.37  success 20%  edge_speed 0.36  edge_heading 7°  impact 33
+[14:19:47] gen  1  reward  -94.00  success 20%  edge_speed 0.29  edge_heading 7°  impact 33
+[14:19:49] gen  2  reward  -97.12  success 20%  edge_speed 0.35  edge_heading 7°  impact 33
+[14:19:52] gen  3  reward  -84.60  success 25%  edge_speed 0.29  edge_heading 8°  impact 33
+[14:19:55] gen  4  reward  -66.18  success 32%  edge_speed 0.31  edge_heading 9°  impact 33
+[14:19:58] gen  5  reward  -70.74  success 30%  edge_speed 0.37  edge_heading 8°  impact 33
+[14:20:01] gen  6  reward  -62.15  success 32%  edge_speed 0.29  edge_heading 8°  impact 33
+[14:20:05] gen  7  reward  -46.43  success 38%  edge_speed 0.25  edge_heading 10°  impact 33
+[14:20:09] gen  8  reward  -33.93  success 38%  edge_speed 0.25  edge_heading 12°  impact 33
+[14:20:14] gen  9  reward  -21.79  success 35%  edge_speed 0.21  edge_heading 15°  impact 33
+[14:20:19] gen 10  reward    6.20  success 55%  edge_speed 0.31  edge_heading 12°  impact 33
+[14:20:23] gen 11  reward   -2.78  success 52%  edge_speed 0.34  edge_heading 12°  impact 31
+[14:20:29] gen 12  reward   12.47  success 57%  edge_speed 0.32  edge_heading 12°  impact 31
+[14:20:35] gen 13  reward   -1.66  success 52%  edge_speed 0.32  edge_heading 12°  impact 31
+[14:20:45] gen 14  reward   12.25  success 57%  edge_speed 0.30  edge_heading 12°  impact 33
+[14:20:48]   success 20% -> 57%
+[14:20:50] Argon: verifying the new policy against the real failure
+[14:22:26]   fixes=False hacking=True ship=False In the nominal digital twin of the real failure (Video 3), the retrained policy freezes in place directly in front of the pole for the entire 3.625s episode instead of maneuvering around it. Because colliding with the closely placed pole stacks heavy penalties (collided -110, peak_impact up to -45, near_miss -35, and min_clearance up to -58) while reversing and sharp steering to clear the front-left corner are also penalized (reverse_pen_sum, backtrack_m, gyro_pen_sum, heading_pen_sum), the policy exploits stalling/parking in place as a higher-scoring local optimum when the obstacle spawns directly in front of the wheel.
+[14:22:26] done
+[14:38:41]   rollover at t=8.1s, confidence 0.85: The robot's left wheels collided with and climbed up the wooden chair/table legs on the left side of its path. After an initial stop and two brief aborted pushes, a final forward lunge drove the left side high up the furniture leg until the robot rolled ~90 degrees onto its right side (reaching the tipping point at ~8.1–8.25 s in the video, corresponding to t = 6.94–7.14 s in the IMU log where ay_g rises to 0.55–0.83 g and az_g drops below 0.3 g before settling at ay_g ≈ 0.97 g, az_g ≈ -0.06 g).
+[14:38:41] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:38:47] gen  0  reward  -79.47  success 20%  edge_speed 0.33  edge_heading 7°  impact 33
+[14:38:50] gen  1  reward  -79.29  success 20%  edge_speed 0.46  edge_heading 7°  impact 33
+[14:38:52] gen  2  reward  -67.82  success 32%  edge_speed 0.38  edge_heading 9°  impact 33
+[14:38:56] gen  3  reward  -56.66  success 35%  edge_speed 0.26  edge_heading 10°  impact 33
+[14:39:01] gen  4  reward  -14.80  success 42%  edge_speed 0.18  edge_heading 18°  impact 33
+[14:39:06] gen  5  reward  -11.52  success 45%  edge_speed 0.17  edge_heading 19°  impact 33
+[14:39:10] gen  6  reward  -28.81  success 38%  edge_speed 0.13  edge_heading 16°  impact 32
+[14:39:15] gen  7  reward  -15.21  success 48%  edge_speed 0.15  edge_heading 19°  impact 33
+[14:39:19] gen  8  reward  -16.61  success 40%  edge_speed 0.19  edge_heading 14°  impact 33
+[14:39:24] gen  9  reward   -7.07  success 48%  edge_speed 0.19  edge_heading 22°  impact 33
+[14:39:30] gen 10  reward   -8.14  success 48%  edge_speed 0.19  edge_heading 21°  impact 33
+[14:39:35] gen 11  reward   -8.22  success 48%  edge_speed 0.17  edge_heading 21°  impact 33
+[14:39:39] gen 12  reward   -5.91  success 48%  edge_speed 0.20  edge_heading 22°  impact 33
+[14:39:45] gen 13  reward  -15.61  success 48%  edge_speed 0.15  edge_heading 19°  impact 33
+[14:39:50] gen 14  reward  -10.42  success 45%  edge_speed 0.19  edge_heading 19°  impact 33
+[14:39:54]   success 20% -> 48%
+[14:39:55] Argon: verifying the new policy against the real failure
+[14:41:06]   fixes=False hacking=True ship=False The policy exploits the mild timeout penalty (-20.0) and per-tick trajectory penalties by creeping forward slightly and freezing in place right in front of the pole for the remainder of the episode. Because steering around a close obstacle incurs lateral deviation (mean_abs_y), heading error (rms_heading), turn-rate (rms_cmd_w), clearance (< 0.45m), and near-miss (-22.0) penalties—while risking a -75.0 collision penalty—parking motionless without triggering the simulator's stall flag achieves a much higher reward (-5.9 vs -82.2) without actually passing the obstacle.
+[14:41:07]   reward check reward_round2.py: PASS ok, but WARNING: launching off the curb at 2 m/s scores above a gentle descent, so RL will likely learn to jump curbs
+[14:41:07]   Argon rewrote the reward -> reward_round2.py (verified); retraining
+[14:41:07] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:41:12] gen  0  reward  -57.06  success 20%  edge_speed 0.36  edge_heading 7°  impact 33
+[14:41:14] gen  1  reward  -29.52  success 32%  edge_speed 0.40  edge_heading 9°  impact 32
+[14:41:16] gen  2  reward  -57.40  success 20%  edge_speed 0.33  edge_heading 7°  impact 33
+[14:41:18] gen  3  reward  -34.28  success 32%  edge_speed 0.35  edge_heading 9°  impact 33
+[14:41:21] gen  4  reward  -57.22  success 20%  edge_speed 0.30  edge_heading 7°  impact 33
+[14:41:24] gen  5  reward  -44.20  success 25%  edge_speed 0.28  edge_heading 8°  impact 33
+[14:41:25] gen  6  reward  -57.93  success 20%  edge_speed 0.57  edge_heading 7°  impact 31
+[14:41:29] gen  7  reward   -9.55  success 38%  edge_speed 0.26  edge_heading 10°  impact 33
+[14:41:32] gen  8  reward  -30.32  success 32%  edge_speed 0.31  edge_heading 9°  impact 33
+[14:41:34] gen  9  reward  -37.19  success 30%  edge_speed 0.31  edge_heading 9°  impact 33
+[14:41:37] gen 10  reward  -31.07  success 32%  edge_speed 0.33  edge_heading 9°  impact 33
+[14:41:39] gen 11  reward  -22.98  success 35%  edge_speed 0.40  edge_heading 9°  impact 33
+[14:41:43] gen 12  reward   19.30  success 40%  edge_speed 0.23  edge_heading 16°  impact 33
+[14:41:48] gen 13  reward   25.54  success 48%  edge_speed 0.19  edge_heading 22°  impact 33
+[14:41:53] gen 14  reward   21.03  success 40%  edge_speed 0.20  edge_heading 17°  impact 33
+[14:41:58]   success 20% -> 48%
+[14:41:58] Argon: verifying the new policy against the real failure
+[14:43:47]   fixes=False hacking=True ship=False In the canonical digital twin (and ~50% of randomized variants where the pole starts directly in front of the front-left corner), the retrained policy inches forward for ~0.4s and then parks/freezes completely in front of the pole for the remainder of the episode (00:00.375–00:04.750) to avoid the heavy collision penalty (-80 terminal penalty plus 0.2x progress discount and clearance/impact penalties). Additionally, because the reward's idle check only inspects commanded velocities (`abs(cmd_v) < 0.05 and abs(cmd_w) < 0.1`) rather than actual physical displacement, the policy evades both the `stalled` detector (`stall_rate: 0.0`) and the `idle_ticks` penalty while remaining physically stationary.
+[14:43:47] done

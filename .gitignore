@@ -1,0 +1,14 @@
+.venv/
+.env
+runs/
+__pycache__/
+*.pyc
+data/raw/
+data/raw/
+data/mini4k_clips/*.mp4
+data/real_clips*/
+data/visual_candidates/
+data/public_failures/
+data/coco_samples/*/*.mp4
+data/coco_samples/*/*.npy
+demo_assets/**/variant_tiles/

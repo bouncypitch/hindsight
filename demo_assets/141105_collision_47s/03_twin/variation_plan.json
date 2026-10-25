@@ -1,0 +1,35 @@
+{
+ "reasoning": "The failure is a head-on collision with a stationary obstacle (a low white concrete barrier and large cone) after starting from rest about 1.2 m away. Because the IMU log was desynchronized from the video and calibrated wheel odometry was unavailable, the exact initial distance (`obs_x`), approach speed (`observed_speed`), and obstacle dimensions/alignment (`obs_r`, `obs_y`) were estimated visually from low-light video. We randomize `obs_x` widely around 1.2 m to cover both visual distance estimation uncertainty and varying stopping/avoidance distances. We vary `obs_y` across the robot's path width (around 0.0 m) so the policy learns to avoid both dead-center and partially offset barriers rather than clipping edges. We vary `obs_r` to represent everything from narrow cones to wider barrier blocks. Finally, we randomize `observed_speed` around 0.9 m/s and `friction` around 0.9 to ensure braking and steering maneuvers remain robust across realistic sidewalk speeds and surface grip levels.",
+ "ranges": [
+  {
+   "param": "obs_x",
+   "minus": 0.4,
+   "plus": 0.8,
+   "why": "Accounts for visual distance uncertainty without wheel odometry (~1.2 m estimated) and trains the policy to react at both shorter (0.8 m) and slightly longer (2.0 m) stand-off distances."
+  },
+  {
+   "param": "obs_y",
+   "minus": 0.35,
+   "plus": 0.35,
+   "why": "Spans the width of the 0.34 m track robot plus obstacle radius so the obstacle remains directly in or partially overlapping the robot's path, forcing true avoidance rather than trivial straight-line misses."
+  },
+  {
+   "param": "obs_r",
+   "minus": 0.15,
+   "plus": 0.2,
+   "why": "Covers uncertainty in the effective footprint of the cone-and-barrier combination (from a single 0.15 m cone up to a 0.50 m wide barrier section)."
+  },
+  {
+   "param": "observed_speed",
+   "minus": 0.3,
+   "plus": 0.5,
+   "why": "Addresses the speed estimation uncertainty (0.9 m/s estimated visually over 1.375 s) and challenges the policy across typical sidewalk acceleration profiles (0.6 to 1.4 m/s)."
+  },
+  {
+   "param": "friction",
+   "minus": 0.25,
+   "plus": 0.2,
+   "why": "Varies concrete tile traction around dry conditions (0.65 to 1.1) to account for nighttime dew, dust, or smooth tile surfaces affecting braking distance and skid-steer turn rate."
+  }
+ ]
+}

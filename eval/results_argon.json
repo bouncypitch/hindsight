@@ -1,0 +1,775 @@
+{
+ "metrics": {
+  "n": 36,
+  "errors": 0,
+  "tp": 3,
+  "fp": 1,
+  "fn": 1,
+  "tn": 31,
+  "precision": 0.75,
+  "recall": 0.75,
+  "type_correct_on_positives": "3/4"
+ },
+ "results": [
+  {
+   "id": "iRKNckUmhaI",
+   "source": "https://www.youtube.com/watch?v=iRKNckUmhaI",
+   "view": "bystander",
+   "label": "tip_over",
+   "note": "robot upside-down on a grassy cycle path, rescued by passer-by",
+   "labeled_by": "news report",
+   "pred": "tip_over",
+   "pred_detail": {
+    "failure": "tip_over",
+    "t_sec": 0.0,
+    "visual_evidence": [
+     "00:00-00:02: The delivery robot is lying upside down on the grass next to the paved path with its wheels in the air.",
+     "00:02-00:07: A bystander rolls the robot over onto its side and then back upright onto its wheels on the path."
+    ],
+    "artifacts_seen": [
+     "00:13: Video cuts to a channel outro graphic."
+    ],
+    "confidence": 1.0
+   }
+  },
+  {
+   "id": "PC8PgOzPKJc",
+   "source": "https://www.youtube.com/watch?v=PC8PgOzPKJc",
+   "view": "bystander",
+   "label": "collision_pedestrian",
+   "note": "Serve robot collides with man on mobility scooter, West Hollywood (disputed whether staged)",
+   "labeled_by": "news report",
+   "pred": "collision_pedestrian",
+   "pred_detail": {
+    "failure": "collision_pedestrian",
+    "t_sec": 12.0,
+    "visual_evidence": [
+     "00:00-00:11: The camera is mounted on or held by a person riding a wheelchair/mobility scooter (black front basket/frame visible at the bottom of the frame) trying to pass a Serve delivery robot on the sidewalk.",
+     "00:11-00:12: As the wheelchair/scooter attempts to pass on the left side, the robot turns left into its path and makes contact with the front of the wheelchair/scooter.",
+     "00:13-00:15: The robot maneuvers and bumps/scrapes directly against the front basket of the wheelchair/scooter with audible impact sounds before moving away to the right at 00:16."
+    ],
+    "artifacts_seen": [
+     "00:05-00:06: Brief frame/audio stutter.",
+     "00:23-00:24: Brief freeze/stutter as the scooter passes the robot.",
+     "00:38-00:39: Brief frame freeze near the end of the clip."
+    ],
+    "confidence": 0.95
+   }
+  },
+  {
+   "id": "Kaz3S6lZtlU",
+   "source": "https://www.youtube.com/shorts/Kaz3S6lZtlU",
+   "view": "bystander",
+   "label": "collision_vehicle",
+   "note": "delivery robot struck by turning car while crossing",
+   "labeled_by": "news report",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00-00:07: The delivery robot remains stationary on the curb ramp at the far end of the crosswalk.",
+     "00:00-00:02: A silver SUV turns right through the crosswalk in front of the stationary robot without making contact.",
+     "00:02-00:07: After the SUV passes, the robot continues waiting stationary on the curb ramp while a black sedan approaches the intersection."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ws10BVc3iHM",
+   "source": "https://www.youtube.com/watch?v=ws10BVc3iHM",
+   "view": "bystander",
+   "label": "curb_failure",
+   "note": "delivery bot gets stuck on a curb, Palisades Park, Santa Monica",
+   "labeled_by": "news report",
+   "pred": "curb_failure",
+   "pred_detail": {
+    "failure": "curb_failure",
+    "t_sec": 9.0,
+    "visual_evidence": [
+     "00:08-00:10: The robot reverses from the bike lane onto a raised concrete curb bordering the park path, getting its rear wheels up on the curb while the front wheels remain below, becoming high-centered and stuck.",
+     "00:18-00:21: The robot's motors hum and the chassis twitches slightly as it attempts to move, but it remains immobilized on the curb.",
+     "00:35-00:48: The bystander notes 'Coco stuck' while the robot remains wedged on the curb in the same position.",
+     "00:50-00:55: The bystander physically lifts and pushes the robot off the curb back onto the bike lane so it can resume driving."
+    ],
+    "artifacts_seen": [
+     "00:07: Crossfade transition between shots.",
+     "00:34: Crossfade transition while the filmer parks their bike.",
+     "01:11: Camera zoom/cut to a closer view of the robot.",
+     "01:37: Crossfade transition along the bike path.",
+     "03:54: Crossfade transition at the intersection.",
+     "04:29-04:36: Abrupt zoom-in and zoom-out on the rear of the robot.",
+     "05:40: Crossfade transition to the channel outro on the beach."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00001_shock_129s",
+   "source": "data/real_clips/ep00001_shock_129s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.000: The robot drives smoothly along a paved path while two pedestrians walk past on the left side with plenty of clearance.",
+     "00:06.000-00:09.000: The robot continues moving steadily down the path with a level camera horizon and no signs of collision, tipping, or leaving the path."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00220_tilt_19s",
+   "source": "data/real_clips_v2/ep00220_tilt_19s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.800: The robot drives smoothly forward along a clear paved path with vegetation on the right.",
+     "00:07.000-00:10.800: Following a video skip, the robot continues driving smoothly down the unobstructed path with no collisions, curb falls, or tip-overs visible."
+    ],
+    "artifacts_seen": [
+     "00:06.800-00:07.000: Hard cut / frame skip where the robot's position jumps forward past the clump of dry grass on the right."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00649_tilt_190s",
+   "source": "data/real_clips_v3/ep00649_tilt_190s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:01.200-00:03.600: The robot drives forward across rough pavement/dirt toward a red structure.",
+     "00:06.000-00:09.400: The robot turns left smoothly around the red structure toward an open area without hitting anything or tipping."
+    ],
+    "artifacts_seen": [
+     "00:00.000-00:01.000: Frozen video frames while telemetry indicates wheel rotation.",
+     "00:03.600-00:05.800: Frozen video frames (no visual motion despite telemetry reporting movement during parts of this interval)."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00001_stall_20s",
+   "source": "data/real_clips/ep00001_stall_20s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:12.200: The robot remains completely stationary on a paved/gravel path beside a curved tiled building wall.",
+     "00:00.000-00:12.200: A pedestrian in the distance walks smoothly from left to right across the path while the camera viewpoint never moves, confirming no tip-over, curb fall, or collision occurs despite noisy telemetry after 00:08.800."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00057_stall_12s",
+   "source": "data/real_clips/ep00057_stall_12s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:01.000: The robot is stationary on a paved path bordered by vegetation.",
+     "00:01.200-00:12.000: The robot drives smoothly and continuously forward along the center of the paved path without encountering any obstacles, curbs, pedestrians, or vehicles (a blue flag/material attached to the left side of the robot briefly flaps in the wind between 00:02.400 and 00:07.400)."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00004_shock_144s",
+   "source": "data/real_clips/ep00004_shock_144s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:08.600: The robot drives steadily forward along the right side of a paved park path parallel to the curb with no visible lurch, collision, or loss of control.",
+     "00:08.800-00:09.800: The camera view remains level and upright on the path with no failure visible."
+    ],
+    "artifacts_seen": [
+     "00:08.800-00:09.800: The video freezes on a static frame until the end of the clip."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00311_tilt_222s",
+   "source": "data/real_clips_v2/ep00311_tilt_222s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:11.600: The robot drives smoothly and continuously forward along an open paved walkway with a yellow building on the left and trees/scooters on the right, without encountering any obstacles, curbs, or collisions."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00684_tilt_243s",
+   "source": "data/real_clips_v3/ep00684_tilt_243s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:08.000: The robot drives smoothly down a residential street and passes a parked white van on the right without making contact or experiencing any mobility issues."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00019_stall_3s",
+   "source": "data/real_clips/ep00019_stall_3s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:02.200: The robot rotates slightly in a residential alley facing a yellow-and-black speed bump.",
+     "00:05.200-00:09.800: The robot drives forward toward and smoothly crosses over the speed bump without any collision, tip-over, or getting stuck."
+    ],
+    "artifacts_seen": [
+     "00:02.400-00:05.000: Frozen video frames where the image remains completely static.",
+     "00:06.600-00:07.400: Brief frame freeze/stutter before motion resumes."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00004_shock_63s",
+   "source": "data/real_clips/ep00004_shock_63s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "curb_fall",
+   "pred_detail": {
+    "failure": "curb_fall",
+    "t_sec": 6.0,
+    "visual_evidence": [
+     "00:00.000-00:05.800: The robot drives forward along the right edge of a paved park path.",
+     "00:06.000-00:07.400: The robot drifts off the right edge of the raised path onto the lower dirt shoulder; the camera lurches and tilts sharply to the right as the right wheels drop off the path edge.",
+     "00:07.600-00:09.800: The robot stops while tilted on the path edge and then reverses."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.95
+   }
+  },
+  {
+   "id": "ep00148_stall_192s",
+   "source": "data/real_clips/ep00148_stall_192s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:09.400: The robot drives continuously along a wide, open paved path with no obstacles, curbs, pedestrians, or vehicles nearby.",
+     "00:07.400-00:08.200: The camera pitches slightly as the robot rolls over a rough patch of pavement, maintaining normal upright posture and forward progress."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00070_stall_16s",
+   "source": "data/real_clips/ep00070_stall_16s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:05.800: The robot drives steadily forward along a wide, clear paved roadway/path with no obstacles, pedestrians, or curbs in its path.",
+     "00:08.000-00:11.800: Video motion resumes and the robot continues driving smoothly along the open path without incident."
+    ],
+    "artifacts_seen": [
+     "00:06.000-00:07.800: Video freezes on a static frame (visible by the fluttering blue flag on the left becoming completely motionless) before resuming at 00:08.000."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00062_stall_12s",
+   "source": "data/real_clips/ep00062_stall_12s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:13.400: The robot drives steadily along a paved path with its blue safety flag blowing into view on the left.",
+     "00:10.000-00:12.400: A pedestrian jogs past on the left side of the path with ample clearance and no contact."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00094_stall_146s",
+   "source": "data/real_clips/ep00094_stall_146s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:12.800: The robot drives straight along a wide, clear paved path between a building on the left and a grassy lawn on the right without encountering any obstacles, curbs, pedestrians, or vehicles."
+    ],
+    "artifacts_seen": [
+     "00:00.000-00:01.200: Video frames are frozen.",
+     "00:02.200-00:06.600: Video frames are frozen, followed by a slight jump in position at 00:06.800.",
+     "00:08.000-00:10.600: Video frames are frozen before motion resumes at 00:10.800."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00060_stall_8s",
+   "source": "data/real_clips/ep00060_stall_8s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:05.600: The robot drives steadily down a paved path with a stone wall on the left.",
+     "00:05.800-00:08.800: The robot comes to a stop on the path (its blue flag waves on the left while a jogger approaches from the distance).",
+     "00:09.000-00:10.400: The robot resumes driving forward as the jogger passes safely on the left side of the road with plenty of clearance."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00067_stall_64s",
+   "source": "data/real_clips/ep00067_stall_64s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.000: The robot drives steadily down a wide paved path with a white fence on the left and parked cars on the right.",
+     "00:08.600-00:12.400: After a video freeze, the robot continues driving straight along the clear path without incident or obstruction."
+    ],
+    "artifacts_seen": [
+     "00:06.000-00:08.400: Video freezes on a single frame.",
+     "00:08.600: Frame skip / jump forward in position when the video unfreezes."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00168_stall_55s",
+   "source": "data/real_clips/ep00168_stall_55s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:05.000: The robot drives straight along a wide paved path while a person passes safely on the far left.",
+     "00:05.200-00:12.200: The robot continues driving straight down the open path, going over minor surface bumps around 00:08.200 and 00:11.200 without any collision, tip-over, or curb failure."
+    ],
+    "artifacts_seen": [
+     "00:05.000-00:05.200: Video cut/skip where the robot's position jumps forward along the path and the pedestrian on the left disappears."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00009_brake_30s",
+   "source": "data/real_clips/ep00009_brake_30s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.400: The robot drives smoothly along an open paved road next to a stone wall.",
+     "00:07.800-00:09.800: The robot continues driving forward normally on the open pavement without encountering any obstacles, curbs, pedestrians, or vehicles."
+    ],
+    "artifacts_seen": [
+     "00:06.600-00:07.600: The video freezes on a single frame (with a blue edge artifact on the far left) before resuming normal motion at 00:07.800."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "ep00011_brake_59s",
+   "source": "data/real_clips/ep00011_brake_59s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.400: The robot drives smoothly across a tiled plaza toward a waterside walkway with pigeons ahead.",
+     "00:07.200-00:08.200: The robot approaches the transition between the dark plaza tiles and the pinkish walkway surface without any collision or instability.",
+     "00:09.200-00:09.800: The robot continues moving forward and slightly turning while remaining completely upright and unobstructed."
+    ],
+    "artifacts_seen": [
+     "00:06.400-00:07.000: Video freezes on identical frames.",
+     "00:08.200-00:09.000: Video freezes again on identical frames."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00025_brake_89s",
+   "source": "data/real_clips/ep00025_brake_89s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:01.400-00:05.600: The robot drives forward along the right side of a street past a wall on the right and a parked car on the left.",
+     "00:07.000-00:09.800: The robot continues driving forward normally along the street without hitting any obstacles or tipping."
+    ],
+    "artifacts_seen": [
+     "00:00.000-00:01.200: Video frames are frozen.",
+     "00:05.600-00:06.800: Video frames freeze again before motion resumes at 00:07.000."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00245_stall_14s",
+   "source": "data/real_clips_v2/ep00245_stall_14s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:05.800: The robot drives along a paved path past bushes and a bin into an open asphalt area.",
+     "00:06.000-00:08.600: The camera view remains stationary in the middle of the asphalt area with no obstacles nearby.",
+     "00:08.800-00:12.800: The robot resumes driving forward across the asphalt and smoothly mounts the low stone curb onto the sidewalk beside the building."
+    ],
+    "artifacts_seen": [
+     "00:06.000-00:08.600: Apparent frozen frames or stationary pause before motion resumes at 00:08.800."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "ep00199_brake_26s",
+   "source": "data/real_clips_v2/ep00199_brake_26s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "flagged by old miner",
+   "labeled_by": "user",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:09.800: The robot drives steadily along an open paved path bordered by grass with no obstacles, pedestrians, vehicles, or curbs present.",
+     "00:07.800-00:09.800: Forward motion continues smoothly along the path until the end of the clip."
+    ],
+    "artifacts_seen": [
+     "00:06.000-00:07.600: Video freezes on identical frames before resuming normal forward motion at 00:07.800."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "collision_ep00189_51s",
+   "source": "data/visual_candidates/collision/ep00189_51s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged collision; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:05.000: The robot drives smoothly down the center of a paved path bordered by vegetation.",
+     "00:06.800-00:09.800: The robot continues driving straight along the path with no obstacles, collisions, or curb departures."
+    ],
+    "artifacts_seen": [
+     "00:05.000-00:06.600: Video freeze (frames remain identical) before motion resumes at 00:06.800."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "collision_ep00198_12s",
+   "source": "data/visual_candidates/collision/ep00198_12s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged collision; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:04.600: Robot drives steadily along a paved path bordered by grass.",
+     "00:04.800-00:07.400: Robot remains stationary on the paved path after a video cut.",
+     "00:07.600-00:09.800: Robot resumes normal forward travel along the path without any obstacles, curb drops, or collisions."
+    ],
+    "artifacts_seen": [
+     "00:04.600-00:04.800: Hard cut / jump forward in the robot's position along the path."
+    ],
+    "confidence": 1.0
+   }
+  },
+  {
+   "id": "collision_ep00238_12s",
+   "source": "data/visual_candidates/collision/ep00238_12s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged collision; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:02.600: The robot drives forward along a sidewalk between two parked cars toward an alleyway/driveway.",
+     "00:02.600-00:05.600: The robot slows down and begins turning right into the alleyway.",
+     "00:06.800-00:09.800: The robot continues driving smoothly down the paved alleyway with no collisions, falls, or stalls."
+    ],
+    "artifacts_seen": [
+     "00:05.600-00:06.000: Video freezes.",
+     "00:06.000-00:06.200: Frame skip / jump in camera orientation as the robot completes its right turn.",
+     "00:06.200-00:06.600: Video freezes briefly again before resuming normal motion."
+    ],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "collision_ep00300_28s",
+   "source": "data/visual_candidates/collision/ep00300_28s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged collision; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:00.600: The robot is stationary on a checkered paved area under a canopy.",
+     "00:00.800-00:09.800: After a scene cut, the robot slowly turns and drives along a paved street intersection without any collisions, curb issues, or tipping."
+    ],
+    "artifacts_seen": [
+     "00:00.600-00:00.800: Hard scene cut from a canopy plaza to a residential street."
+    ],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "curb_fall_ep00017_417s",
+   "source": "data/visual_candidates/curb_fall/ep00017_417s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged curb_fall; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:03.600: The robot drives forward approaching a yellow-and-black striped speed bump.",
+     "00:03.800-00:05.200: The robot crosses the speed bump; the camera pitches up and down briefly as the wheels go over it, then levels out.",
+     "00:05.400-00:09.800: The robot continues driving smoothly on the flat pavement and turns slightly to the right without any mobility failure."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.98
+   }
+  },
+  {
+   "id": "curb_fall_ep00232_188s",
+   "source": "data/visual_candidates/curb_fall/ep00232_188s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged curb_fall; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:09.800: The robot drives steadily down a paved path with a pedestrian walking ahead on the left and small roadside markers on the right.",
+     "00:03.600, 00:05.000, 00:07.800, 00:09.600: Minor camera vibrations from uneven pavement, with the robot remaining upright and continuing forward normally."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.95
+   }
+  },
+  {
+   "id": "curb_fall_ep00579_47s",
+   "source": "data/visual_candidates/curb_fall/ep00579_47s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged curb_fall; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:04.200: The robot drives forward down a street toward a yellow-and-black speed bump.",
+     "00:04.200-00:05.800: The robot pitches up and down normally as it drives over the speed bump, then levels out.",
+     "00:06.000-00:09.800: The robot continues driving forward normally down the street with no collisions, falls, or tip-overs."
+    ],
+    "artifacts_seen": [],
+    "confidence": 0.99
+   }
+  },
+  {
+   "id": "tip_over_ep00253_196s",
+   "source": "data/visual_candidates/tip_over/ep00253_196s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged tip_over; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:01.600: Robot is stationary on a tiled area with orange barriers.",
+     "00:01.800-00:06.400: Robot slowly turns to the right without making contact with the orange barriers.",
+     "00:06.600-00:09.800: After a scene cut, the robot is stationary on a paved path next to a grassy area and pole with no failure occurring."
+    ],
+    "artifacts_seen": [
+     "00:00.000-00:01.600: Static/frozen frames.",
+     "00:06.600: Hard cut to a completely different outdoor scene.",
+     "00:06.600-00:09.800: Frozen frame after the scene cut."
+    ],
+    "confidence": 1.0
+   }
+  },
+  {
+   "id": "tip_over_ep00264_96s",
+   "source": "data/visual_candidates/tip_over/ep00264_96s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged tip_over; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.600: The robot drives smoothly along the middle of a flat, wide paved plaza with no obstacles in its path.",
+     "00:06.800-00:09.800: The video abruptly cuts in a single frame to a static, rotated image of grass and trees with no continuous motion from the plaza scene."
+    ],
+    "artifacts_seen": [
+     "00:06.800: Hard cut to a completely different, rotated scene without any transitional motion.",
+     "00:06.800-00:09.800: Frozen frame lasting until the end of the clip."
+    ],
+    "confidence": 0.95
+   }
+  },
+  {
+   "id": "tip_over_ep00307_177s",
+   "source": "data/visual_candidates/tip_over/ep00307_177s.mp4",
+   "view": "robot",
+   "label": "none",
+   "note": "visual scanner flagged tip_over; frames show no failure",
+   "labeled_by": "claude (frame review)",
+   "pred": "none",
+   "pred_detail": {
+    "failure": "none",
+    "t_sec": null,
+    "visual_evidence": [
+     "00:00.000-00:06.600: The robot drives normally across a tiled plaza during the day with no obstacles or incidents.",
+     "00:06.800-00:09.800: After a hard scene cut, the camera is stationary in a dark outdoor area looking at another robot, with no mobility failure occurring."
+    ],
+    "artifacts_seen": [
+     "00:06.800: Hard cut from a daytime tiled plaza to a nighttime scene in a completely different location."
+    ],
+    "confidence": 1.0
+   }
+  }
+ ]
+}

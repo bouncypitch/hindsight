@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Coco Robotics Digital Twin</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+  #ui {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(12, 14, 18, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #eee;
+    font-size: 13px;
+    z-index: 10;
+  }
+  #ui.hidden {
+    display: none !important;
+  }
+  #ui button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  #ui button:hover {
+    background: #1d4ed8;
+  }
+  #ui input[type="range"] {
+    width: 240px;
+    cursor: pointer;
+  }
+  #ui .val {
+    font-variant-numeric: tabular-nums;
+    min-width: 48px;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="ui">
+  <button id="playBtn">Pause</button>
+  <input id="scrubber" type="range" min="0" max="18" step="0.01" value="0" />
+  <span id="timeLabel" class="val">0.00s</span>
+  <button id="camBtn">Cam: Robot</button>
+  <label style="display:flex;align-items:center;gap:4px;">
+    Pitch
+    <input id="pitchSlider" type="range" min="-8" max="4" step="0.1" value="-2.0" style="width:70px;" />
+  </label>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ============================================================================
+// URL Parameters & Fallback Trajectory
+// ============================================================================
+const urlParams = new URLSearchParams(window.location.search);
+const trajUrl = urlParams.get('traj');
+let camMode = urlParams.get('cam') === 'chase' ? 'chase' : 'robot';
+const isCapture = urlParams.get('capture') === '1';
+
+const uiEl = document.getElementById('ui');
+if (isCapture) {
+  uiEl.classList.add('hidden');
+}
+
+const FALLBACK_TRAJ = {
+  fps: 20.0,
+  camera: {
+    hfov_deg: 110.44766183865366,
+    vfov_deg: 78.01841587930589,
+    height_m: 0.456,
+    aspect: 1.7777777777777777
+  },
+  frames: [
+    { t: 0.0, x: 0.0, y: 0.0, yaw: 0.0, v: 0.0 },
+    { t: 1.0, x: 0.0, y: 0.0, yaw: 0.0, v: 0.0 },
+    { t: 2.0, x: 0.0, y: 0.0, yaw: -0.0001, v: -0.001 },
+    { t: 3.0, x: 0.0, y: 0.0, yaw: -0.0001, v: 0.001 },
+    { t: 4.0, x: 0.001, y: 0.0, yaw: -0.0001, v: 0.006 },
+    { t: 5.0, x: -0.002, y: 0.0, yaw: -0.0003, v: 0.001 },
+    { t: 6.0, x: -0.003, y: 0.0, yaw: -0.0002, v: 0.0 },
+    { t: 7.0, x: -0.003, y: 0.0, yaw: -0.0002, v: 0.0 },
+    { t: 8.0, x: 0.194, y: 0.007, yaw: 0.0827, v: 0.567 },
+    { t: 9.0, x: 1.078, y: 0.175, yaw: 0.2188, v: 1.063 },
+    { t: 10.0, x: 2.568, y: 0.666, yaw: 0.4077, v: 1.819 },
+    { t: 11.0, x: 4.692, y: 1.53, yaw: 0.3311, v: 2.494 },
+    { t: 12.0, x: 7.097, y: 2.313, yaw: 0.2675, v: 2.131 },
+    { t: 13.0, x: 9.18, y: 2.917, yaw: 0.2588, v: 2.399 },
+    { t: 14.0, x: 11.589, y: 3.446, yaw: 0.2051, v: 2.56 },
+    { t: 15.0, x: 14.074, y: 3.854, yaw: 0.0873, v: 2.28 },
+    { t: 16.0, x: 16.445, y: 4.002, yaw: 0.095, v: 1.872 },
+    { t: 17.0, x: 17.957, y: 4.824, yaw: 0.7328, v: 2.241 },
+    { t: 18.0, x: 19.222, y: 6.826, yaw: 1.3547, v: 1.895 }
+  ]
+};
+
+let trajData = FALLBACK_TRAJ;
+let pitchDeg = -2.0;
+
+// Coordinate conversion helper: sim (x, y, z) -> three (x, z, -y)
+function simToThree(x, y, z = 0) {
+  return new THREE.Vector3(x, z, -y);
+}
+
+// ============================================================================
+// Renderer, Scene & Camera Setup
+// ============================================================================
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  preserveDrawingBuffer: true,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x010204);
+scene.fog = new THREE.FogExp2(0x020307, 0.0085);
+
+const robotCamera = new THREE.PerspectiveCamera(
+  78.01841587930589,
+  1.7777777777777777,
+  0.08,
+  250
+);
+robotCamera.rotation.order = 'YXZ';
+
+const chaseCamera = new THREE.PerspectiveCamera(
+  65,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  250
+);
+
+// ============================================================================
+// Post-Processing (Bloom + Camera Sensor / Lens Shader)
+// ============================================================================
+const renderPass = new RenderPass(scene, robotCamera);
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.52, // strength
+  0.42, // radius
+  0.76  // threshold
+);
+
+const CameraLookShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTime: { value: 0.0 },
+    uSpeed: { value: 0.0 },
+    uIsRobotCam: { value: 1.0 },
+    uOrbAlpha: { value: 1.0 }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uSpeed;
+    uniform float uIsRobotCam;
+    uniform float uOrbAlpha;
+    varying vec2 vUv;
+
+    float hash12(vec2 p) {
+      vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+      p3 += dot(p3, p3.yzx + 33.33);
+      return fract((p3.x + p3.y) * p3.z);
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      vec2 centered = uv - 0.5;
+      float r2 = dot(centered, centered);
+
+      // Subtle wide-angle chromatic dispersion & radial softness near edges
+      float ca = r2 * 0.0045 * uIsRobotCam;
+      vec3 col;
+      col.r = texture2D(tDiffuse, uv + centered * ca).r;
+      col.g = texture2D(tDiffuse, uv).g;
+      col.b = texture2D(tDiffuse, uv - centered * ca).b;
+
+      // Slight radial blur & ground motion blur when moving fast at night
+      float motionFactor = clamp(uSpeed / 2.4, 0.0, 1.0) * uIsRobotCam;
+      float groundMask = smoothstep(0.45, 0.12, uv.y); // bottom of screen is uv.y < 0.5
+      float edgeMask = smoothstep(0.08, 0.45, r2);
+      float blurAmt = (motionFactor * groundMask * 0.014) + (edgeMask * 0.003 * uIsRobotCam);
+
+      if (blurAmt > 0.0002) {
+        vec2 dir = normalize(uv - vec2(0.5, 0.48) + vec2(0.0001));
+        vec3 acc = col * 0.36;
+        acc += texture2D(tDiffuse, clamp(uv + dir * blurAmt * 0.45, 0.001, 0.999)).rgb * 0.24;
+        acc += texture2D(tDiffuse, clamp(uv - dir * blurAmt * 0.45, 0.001, 0.999)).rgb * 0.20;
+        acc += texture2D(tDiffuse, clamp(uv + dir * blurAmt * 0.95, 0.001, 0.999)).rgb * 0.10;
+        acc += texture2D(tDiffuse, clamp(uv - dir * blurAmt * 0.95, 0.001, 0.999)).rgb * 0.10;
+        col = acc;
+      }
+
+      // Subtle lens dust orb near top-center (seen in real footage at u=0.538, v_top=0.062 -> uv.y=0.938)
+      if (uIsRobotCam > 0.5 && uOrbAlpha > 0.01) {
+        vec2 orbPos = vec2(0.538, 0.938);
+        vec2 dOrb = (uv - orbPos) * vec2(1.7778, 1.0);
+        float distOrb = length(dOrb);
+        float orb = smoothstep(0.048, 0.018, distOrb) * (0.65 + 0.35 * smoothstep(0.015, 0.042, distOrb));
+        col += vec3(0.075, 0.072, 0.068) * orb * uOrbAlpha;
+      }
+
+      // Vignette matching wide-angle robot lens
+      float vig = 1.0 - r2 * (0.38 * uIsRobotCam + 0.15);
+      col *= clamp(vig, 0.65, 1.0);
+
+      // Slight shadow lift and night-camera color grade
+      col = pow(max(col, vec3(0.0)), vec3(0.96, 0.97, 0.99));
+
+      // Deterministic sensor grain
+      float n = hash12(uv * vec2(1280.0, 720.0) + vec2(uTime * 37.0, uTime * 19.0)) - 0.5;
+      col += n * 0.018;
+
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }
+  `
+};
+
+const cameraLookPass = new ShaderPass(CameraLookShader);
+const outputPass = new OutputPass();
+
+const composer = new EffectComposer(renderer);
+composer.addPass(renderPass);
+composer.addPass(bloomPass);
+composer.addPass(cameraLookPass);
+composer.addPass(outputPass);
+
+// ============================================================================
+// Procedural Texture Generators (Canvas Only)
+// ============================================================================
+function createSeededRandom(seed = 12345) {
+  let s = seed >>> 0;
+  return function() {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+// 1. Foreground Sidewalk & Curb Concrete Texture
+function createSidewalkTextures() {
+  const size = 1024;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const rng = createSeededRandom(101);
+
+  ctx.fillStyle = '#8b929a';
+  ctx.fillRect(0, 0, size, size);
+
+  // Subtle blotches
+  for (let i = 0; i < 900; i++) {
+    const x = rng() * size;
+    const y = rng() * size;
+    const r = 8 + rng() * 45;
+    const v = Math.floor(120 + rng() * 45);
+    ctx.fillStyle = `rgba(${v},${v + 3},${v + 6},0.08)`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Broom finish horizontal/diagonal fine streaks
+  for (let i = 0; i < 4500; i++) {
+    const x = rng() * size;
+    const y = rng() * size;
+    const len = 15 + rng() * 65;
+    const v = rng() > 0.5 ? 165 : 105;
+    ctx.strokeStyle = `rgba(${v},${v + 2},${v + 5},0.07)`;
+    ctx.lineWidth = 1 + rng() * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len * 0.3, y + len);
+    ctx.stroke();
+  }
+
+  // Fine speckle grain
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const n = (rng() - 0.5) * 26;
+    data[i] = Math.min(255, Math.max(0, data[i] + n));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + n));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + n));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Expansion joints & cracks
+  ctx.strokeStyle = 'rgba(30, 32, 35, 0.55)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, size * 0.48);
+  ctx.lineTo(size, size * 0.52);
+  ctx.moveTo(size * 0.32, 0);
+  ctx.lineTo(size * 0.28, size);
+  ctx.stroke();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// 2. Yellow Tactile Warning Pad Texture + Bump Map
+function createTactilePadTextures() {
+  const w = 1024, h = 512;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+
+  const b = document.createElement('canvas');
+  b.width = w; b.height = h;
+  const bctx = b.getContext('2d');
+
+  const rng = createSeededRandom(202);
+
+  // Base yellow/ochre rubber-plastic tone
+  ctx.fillStyle = '#c89d32';
+  ctx.fillRect(0, 0, w, h);
+
+  bctx.fillStyle = '#808080';
+  bctx.fillRect(0, 0, w, h);
+
+  // Grime & weathering patches
+  for (let i = 0; i < 400; i++) {
+    const x = rng() * w;
+    const y = rng() * h;
+    const r = 6 + rng() * 35;
+    const dark = rng() > 0.35;
+    ctx.fillStyle = dark ? 'rgba(55, 42, 15, 0.11)' : 'rgba(235, 198, 95, 0.09)';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Dark border & tile seams
+  ctx.strokeStyle = 'rgba(25, 20, 10, 0.85)';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(4, 4, w - 8, h - 8);
+
+  // Vertical tile joint breaks
+  const tileCols = 4;
+  for (let i = 1; i < tileCols; i++) {
+    const tx = (w / tileCols) * i;
+    ctx.strokeStyle = 'rgba(30, 24, 10, 0.75)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(tx, 0);
+    ctx.lineTo(tx, h);
+    ctx.stroke();
+
+    bctx.strokeStyle = '#303030';
+    bctx.lineWidth = 5;
+    bctx.beginPath();
+    bctx.moveTo(tx, 0);
+    bctx.lineTo(tx, h);
+    bctx.stroke();
+  }
+
+  // Truncated dome grid
+  const cols = 44;
+  const rows = 18;
+  const dx = (w - 36) / cols;
+  const dy = (h - 36) / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let col = 0; col < cols; col++) {
+      const cx = 18 + (col + 0.5) * dx;
+      const cy = 18 + (r + 0.5) * dy;
+      const rad = Math.min(dx, dy) * 0.32;
+
+      // Dark shadow ring on bottom/right of each dome
+      ctx.fillStyle = 'rgba(38, 28, 8, 0.65)';
+      ctx.beginPath();
+      ctx.arc(cx + 1.5, cy + 1.8, rad * 1.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dome body
+      const grad = ctx.createRadialGradient(cx - 1.5, cy - 1.5, rad * 0.1, cx, cy, rad);
+      grad.addColorStop(0, '#f0ca62');
+      grad.addColorStop(0.65, '#cfa235');
+      grad.addColorStop(1, '#7a5c18');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bump map dome
+      const bgrad = bctx.createRadialGradient(cx, cy, rad * 0.2, cx, cy, rad * 1.1);
+      bgrad.addColorStop(0, '#ffffff');
+      bgrad.addColorStop(0.65, '#d0d0d0');
+      bgrad.addColorStop(1, '#707070');
+      bctx.fillStyle = bgrad;
+      bctx.beginPath();
+      bctx.arc(cx, cy, rad * 1.05, 0, Math.PI * 2);
+      bctx.fill();
+    }
+  }
+
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
+
+  const bumpMap = new THREE.CanvasTexture(b);
+  bumpMap.anisotropy = 8;
+
+  return { map, bumpMap };
+}
+
+// 3. Asphalt Road Texture + Bump/Roughness Map
+function createAsphaltTextures() {
+  const size = 1024;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const rng = createSeededRandom(303);
+
+  ctx.fillStyle = '#2d3035';
+  ctx.fillRect(0, 0, size, size);
+
+  // Road patch variations
+  for (let i = 0; i < 650; i++) {
+    const x = rng() * size;
+    const y = rng() * size;
+    const r = 12 + rng() * 70;
+    const v = Math.floor(32 + rng() * 30);
+    ctx.fillStyle = `rgba(${v},${v + 2},${v + 4},0.12)`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Linear streaks along traffic/robot direction
+  for (let i = 0; i < 3500; i++) {
+    const x = rng() * size;
+    const y = rng() * size;
+    const len = 30 + rng() * 120;
+    const v = rng() > 0.45 ? 65 : 22;
+    ctx.strokeStyle = `rgba(${v},${v + 2},${v + 5},0.075)`;
+    ctx.lineWidth = 1 + rng() * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + len, y + (rng() - 0.5) * 8);
+    ctx.stroke();
+  }
+
+  // High-frequency aggregate noise
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const data = imgData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const n = (rng() - 0.5) * 38;
+    const sparkle = rng() > 0.97 ? 28 : 0;
+    data[i] = Math.min(255, Math.max(0, data[i] + n + sparkle));
+    data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + n + sparkle));
+    data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + n + sparkle));
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Subtle tar crack lines
+  ctx.strokeStyle = 'rgba(14, 15, 18, 0.55)';
+  ctx.lineWidth = 2.0;
+  for (let k = 0; k < 10; k++) {
+    let cx = rng() * size;
+    let cy = rng() * size;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    for (let s = 0; s < 12; s++) {
+      cx += (rng() - 0.3) * 40;
+      cy += (rng() - 0.5) * 40;
+      ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+  }
+
+  const map = new THREE.CanvasTexture(c);
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(10, 10);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 16;
+
+  const bumpMap = new THREE.CanvasTexture(c);
+  bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  bumpMap.repeat.set(10, 10);
+  bumpMap.anisotropy = 8;
+
+  return { map, bumpMap };
+}
+
+// 4. Manhole Cover Texture
+function createManholeTexture(isDark = false) {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const rng = createSeededRandom(isDark ? 404 : 505);
+
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size * 0.44;
+  // Outer asphalt collar
+  const outerGrad = ctx.createRadialGradient(cx, cy, r * 0.85, cx, cy, r * 1.12);
+  outerGrad.addColorStop(0, isDark ? 'rgba(12,14,16,0.95)' : 'rgba(24,26,30,0.9)');
+  outerGrad.addColorStop(1, 'rgba(24,26,30,0)');
+  ctx.fillStyle = outerGrad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Cast iron lid
+  ctx.fillStyle = isDark ? '#181c20' : '#3d424b';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.92, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Concentric iron rings & waffle pattern
+  ctx.strokeStyle = isDark ? '#2d333b' : '#58606d';
+  ctx.lineWidth = 4;
+  for (let k = 1; k <= 3; k++) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * (0.28 * k), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < 16; i++) {
+    const ang = (i / 16) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang) * r * 0.25, cy + Math.sin(ang) * r * 0.25);
+    ctx.lineTo(cx + Math.cos(ang) * r * 0.88, cy + Math.sin(ang) * r * 0.88);
+    ctx.stroke();
+  }
+
+  // Rim highlight
+  ctx.strokeStyle = isDark ? 'rgba(110,120,130,0.45)' : 'rgba(150,160,175,0.5)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.92, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// 5. Text Sign Texture Generator ("BRAMAN", "HYUNDAI", Street Signs)
+function createSignTexture({ text, bgColor, textColor, glowColor, width = 512, height = 128, font = 'bold 76px Arial, sans-serif', letterSpacing = 4, drawHyundaiLogo = false, border = null }) {
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  const ctx = c.getContext('2d');
+
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, width, height);
+
+  if (border) {
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(4, 4, width - 8, height - 8);
+  }
+
+  ctx.save();
+  if (glowColor) {
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 18;
+  }
+  ctx.fillStyle = textColor;
+  ctx.font = font;
+  ctx.textBaseline = 'middle';
+
+  let startX = width * 0.5;
+  if (drawHyundaiLogo) {
+    // Draw stylized oval H logo on the left
+    const lx = width * 0.17;
+    const ly = height * 0.5;
+    ctx.strokeStyle = '#68a8ff';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.ellipse(lx, ly, 46, 26, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(lx - 20, ly + 18);
+    ctx.lineTo(lx - 10, ly - 18);
+    ctx.moveTo(lx + 10, ly + 18);
+    ctx.lineTo(lx + 20, ly - 18);
+    ctx.moveTo(lx - 15, ly);
+    ctx.lineTo(lx + 15, ly);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.fillText(text, width * 0.30, height * 0.52);
+  } else {
+    ctx.textAlign = 'center';
+    ctx.fillText(text, startX, height * 0.52);
+    // Double pass for crisp inner core
+    ctx.shadowBlur = 4;
+    ctx.fillText(text, startX, height * 0.52);
+  }
+  ctx.restore();
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return tex;
+}
+
+// 6. High-Rise Residential Tower Facade Texture
+function createHighRiseTexture() {
+  const w = 512, h = 1024;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  const rng = createSeededRandom(606);
+
+  // Pale concrete base
+  ctx.fillStyle = '#383a40';
+  ctx.fillRect(0, 0, w, h);
+
+  // Vertical structural pilasters
+  const cols = 6;
+  const colW = w / cols;
+  for (let i = 0; i <= cols; i++) {
+    ctx.fillStyle = '#474952';
+    ctx.fillRect(i * colW - 6, 0, 12, h);
+  }
+
+  // Floors & recessed dark balcony windows
+  const floors = 32;
+  const floorH = h / floors;
+  for (let r = 0; r < floors; r++) {
+    const y = r * floorH;
+    // Floor slab band
+    ctx.fillStyle = '#4a4c54';
+    ctx.fillRect(0, y, w, 5);
+
+    for (let col = 0; col < cols; col++) {
+      const x = col * colW + 8;
+      const ww = colW - 16;
+      const wh = floorH - 8;
+
+      // Mostly dark windows with a few warm/pinkish lit ones matching reference frames
+      const isLit = (col === 2 && (r === 24 || r === 25 || r === 12 || r === 5)) || (rng() > 0.93);
+      if (isLit) {
+        ctx.fillStyle = rng() > 0.4 ? '#8a5d55' : '#967c62';
+      } else {
+        ctx.fillStyle = '#0f1115';
+      }
+      ctx.fillRect(x, y + 6, ww, wh);
+
+      // Balcony railing shadow
+      ctx.fillStyle = 'rgba(20, 22, 26, 0.7)';
+      ctx.fillRect(x, y + 6 + wh * 0.55, ww, 3);
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// 7. Showroom Ceiling Downlights Texture
+function createShowroomCeilingTexture() {
+  const w = 512, h = 512;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+
+  ctx.fillStyle = '#bfa68f';
+  ctx.fillRect(0, 0, w, h);
+
+  // Subtle ceiling tile grid
+  ctx.strokeStyle = 'rgba(90, 75, 62, 0.35)';
+  ctx.lineWidth = 2;
+  const step = 32;
+  for (let i = 0; i <= w; i += step) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0); ctx.lineTo(i, h);
+    ctx.moveTo(0, i); ctx.lineTo(w, i);
+    ctx.stroke();
+  }
+
+  // Recessed bright downlight dots
+  for (let y = 32; y < h; y += 64) {
+    for (let x = 32; x < w; x += 64) {
+      const g = ctx.createRadialGradient(x, y, 1, x, y, 14);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.4, '#ffeed8');
+      g.addColorStop(1, 'rgba(191,166,143,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(6, 2);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// ============================================================================
+// Build Scene Geometry
+// ============================================================================
+const sidewalkTex = createSidewalkTextures();
+const tactileTex = createTactilePadTextures();
+const asphaltTex = createAsphaltTextures();
+const darkManholeTex = createManholeTexture(true);
+const ironManholeTex = createManholeTexture(false);
+
+// 1. Main Asphalt Road Plane
+const roadMat = new THREE.MeshStandardMaterial({
+  map: asphaltTex.map,
+  bumpMap: asphaltTex.bumpMap,
+  bumpScale: 0.018,
+  roughness: 0.68,
+  metalness: 0.08
+});
+const roadGeo = new THREE.PlaneGeometry(120, 120);
+const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+roadMesh.rotation.x = -Math.PI / 2;
+roadMesh.position.set(18, 0.0, -10);
+roadMesh.receiveShadow = true;
+scene.add(roadMesh);
+
+// 2. Near Sidewalk & Curb Ramp (where robot starts at origin)
+const sidewalkMat = new THREE.MeshStandardMaterial({
+  map: sidewalkTex,
+  bumpMap: sidewalkTex,
+  bumpScale: 0.012,
+  color: 0xb0b8c2,
+  roughness: 0.72,
+  metalness: 0.04
+});
+
+// Construct near sidewalk polygon with swept corner around (x: -4..1.95, z: -4..6)
+const nearSidewalkShape = new THREE.Shape();
+nearSidewalkShape.moveTo(-5.0, -5.0);
+nearSidewalkShape.lineTo(1.75, -5.0);
+nearSidewalkShape.quadraticCurveTo(2.15, -1.2, 1.88, 0.0);
+nearSidewalkShape.quadraticCurveTo(1.55, 0.85, 0.75, 1.85);
+nearSidewalkShape.lineTo(-5.0, 3.5);
+nearSidewalkShape.closePath();
+
+const nearSidewalkGeo = new THREE.ExtrudeGeometry(nearSidewalkShape, {
+  depth: 0.025,
+  bevelEnabled: true,
+  bevelThickness: 0.008,
+  bevelSize: 0.015,
+  bevelSegments: 2
+});
+nearSidewalkGeo.rotateX(Math.PI / 2);
+const nearSidewalkMesh = new THREE.Mesh(nearSidewalkGeo, sidewalkMat);
+nearSidewalkMesh.position.y = 0.022;
+nearSidewalkMesh.receiveShadow = true;
+scene.add(nearSidewalkMesh);
+
+// Curved Concrete Curb Stone Rim between Yellow Pad and Road (X ~ 1.4..1.98)
+const curbRimShape = new THREE.Shape();
+curbRimShape.moveTo(-1.8, 1.35);
+curbRimShape.quadraticCurveTo(-0.3, 1.50, 0.25, 1.28);
+curbRimShape.quadraticCurveTo(0.85, 1.00, 1.38, 0.50);
+curbRimShape.lineTo(1.62, 0.78);
+curbRimShape.quadraticCurveTo(1.05, 1.38, 0.35, 1.72);
+curbRimShape.quadraticCurveTo(-0.35, 1.98, -1.9, 1.75);
+curbRimShape.closePath();
+
+// Convert (z_three, x_three) shape to world XZ
+const curbRimPts = [
+  new THREE.Vector2(1.42, -1.65),
+  new THREE.Vector2(1.50, -0.55),
+  new THREE.Vector2(1.40, 0.05),
+  new THREE.Vector2(1.15, 0.62),
+  new THREE.Vector2(0.75, 1.12),
+  new THREE.Vector2(0.45, 1.45),
+  new THREE.Vector2(0.82, 1.72),
+  new THREE.Vector2(1.18, 1.35),
+  new THREE.Vector2(1.62, 0.82),
+  new THREE.Vector2(1.90, 0.12),
+  new THREE.Vector2(1.98, -0.55),
+  new THREE.Vector2(1.86, -1.65)
+];
+const curbShape2 = new THREE.Shape();
+curbShape2.moveTo(curbRimPts[0].x, curbRimPts[0].y);
+for (let i = 1; i < curbRimPts.length; i++) {
+  curbShape2.lineTo(curbRimPts[i].x, curbRimPts[i].y);
+}
+curbShape2.closePath();
+
+const curbMat = new THREE.MeshStandardMaterial({
+  map: sidewalkTex,
+  bumpMap: sidewalkTex,
+  bumpScale: 0.016,
+  color: 0x868c94,
+  roughness: 0.76,
+  metalness: 0.05
+});
+const curbRimGeo = new THREE.ExtrudeGeometry(curbShape2, {
+  depth: 0.032,
+  bevelEnabled: true,
+  bevelThickness: 0.008,
+  bevelSize: 0.012,
+  bevelSegments: 2
+});
+curbRimGeo.rotateX(Math.PI / 2);
+const curbRimMesh = new THREE.Mesh(curbRimGeo, curbMat);
+curbRimMesh.position.y = 0.032;
+scene.add(curbRimMesh);
+
+// Dark joint seam line on the concrete curb at u ~ 0.65 (visible in Frames 1-3)
+const seamMat = new THREE.MeshBasicMaterial({ color: 0x15171a });
+const curbSeam = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.038, 0.018), seamMat);
+curbSeam.position.set(1.52, 0.02, 0.34);
+curbSeam.rotation.y = -0.45;
+scene.add(curbSeam);
+
+// 3. Yellow Tactile Warning Pad (Custom Curved Mesh + 3D Truncated Domes)
+const padSegX = 20, padSegZ = 40;
+const padGeo = new THREE.BufferGeometry();
+const padPos = [];
+const padUvs = [];
+const padIdx = [];
+
+// Parameterize tactile pad from u (0=left tip to 1=right bottom) and v (0=near edge to 1=far curb edge)
+function evalPadPoint(u, v) {
+  // Left edge (u=0): near=(0.90, -0.56), far=(1.36, -0.60)
+  // Mid (u=0.45): near=(0.74, 0.02), far=(1.34, 0.08)
+  // Right (u=1.0): near=(0.35, 0.65), far=(0.75, 1.08)
+  const zNear = -0.56 + u * 1.18 + Math.pow(u, 2) * 0.08;
+  const xNear = 0.90 - u * 0.22 - Math.pow(u, 2.2) * 0.32;
+
+  const zFar = -0.60 + u * 1.32 + Math.pow(u, 1.8) * 0.36;
+  const xFar = 1.36 - u * 0.05 - Math.pow(u, 2.1) * 0.56;
+
+  const x = THREE.MathUtils.lerp(xNear, xFar, v);
+  const z = THREE.MathUtils.lerp(zNear, zFar, v);
+  const y = 0.026 + Math.sin(v * Math.PI) * 0.003;
+  return { x, y, z };
+}
+
+for (let iz = 0; iz <= padSegZ; iz++) {
+  const u = iz / padSegZ;
+  for (let ix = 0; ix <= padSegX; ix++) {
+    const v = ix / padSegX;
+    const p = evalPadPoint(u, v);
+    padPos.push(p.x, p.y, p.z);
+    padUvs.push(u, v);
+  }
+}
+for (let iz = 0; iz < padSegZ; iz++) {
+  for (let ix = 0; ix < padSegX; ix++) {
+    const a = iz * (padSegX + 1) + ix;
+    const b = a + 1;
+    const c = (iz + 1) * (padSegX + 1) + ix;
+    const d = c + 1;
+    padIdx.push(a, c, b, b, c, d);
+  }
+}
+padGeo.setAttribute('position', new THREE.Float32BufferAttribute(padPos, 3));
+padGeo.setAttribute('uv', new THREE.Float32BufferAttribute(padUvs, 2));
+padGeo.setIndex(padIdx);
+padGeo.computeVertexNormals();
+
+const padMat = new THREE.MeshStandardMaterial({
+  map: tactileTex.map,
+  bumpMap: tactileTex.bumpMap,
+  bumpScale: 0.015,
+  roughness: 0.46,
+  metalness: 0.08
+});
+const padMesh = new THREE.Mesh(padGeo, padMat);
+scene.add(padMesh);
+
+// 3D Instanced Truncated Domes on the Yellow Pad for real 3D specular & shadow relief
+const domeCols = 38, domeRows = 14;
+const domeGeo = new THREE.CylinderGeometry(0.0085, 0.0135, 0.0055, 10);
+const domeMat = new THREE.MeshStandardMaterial({
+  color: 0xd4a638,
+  roughness: 0.42,
+  metalness: 0.1
+});
+const domeInst = new THREE.InstancedMesh(domeGeo, domeMat, domeCols * domeRows);
+const dummy = new THREE.Object3D();
+let dIdx = 0;
+for (let c = 0; c < domeCols; c++) {
+  const u = (c + 0.6) / (domeCols + 0.2);
+  for (let r = 0; r < domeRows; r++) {
+    const v = (r + 0.6) / (domeRows + 0.2);
+    const p = evalPadPoint(u, v);
+    dummy.position.set(p.x, p.y + 0.0022, p.z);
+    dummy.rotation.set(0, 0, -0.03);
+    dummy.updateMatrix();
+    domeInst.setMatrixAt(dIdx++, dummy.matrix);
+  }
+}
+domeInst.instanceMatrix.needsUpdate = true;
+scene.add(domeInst);
+
+// Dark seam/crack & utility lid on left of yellow tactile pad (Frames 1-3)
+const fgManhole = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.38, 0.38),
+  new THREE.MeshStandardMaterial({
+    map: darkManholeTex,
+    transparent: true,
+    roughness: 0.55,
+    metalness: 0.3
+  })
+);
+fgManhole.rotation.x = -Math.PI / 2;
+fgManhole.position.set(1.02, 0.025, -1.22);
+scene.add(fgManhole);
+
+// Dark cracked patch between foreground manhole and left tip of yellow pad
+const crackPatchGeo = new THREE.PlaneGeometry(0.48, 0.62);
+const crackPatchCanvas = document.createElement('canvas');
+crackPatchCanvas.width = crackPatchCanvas.height = 128;
+const cpCtx = crackPatchCanvas.getContext('2d');
+cpCtx.clearRect(0, 0, 128, 128);
+cpCtx.fillStyle = 'rgba(15, 18, 22, 0.85)';
+cpCtx.beginPath();
+cpCtx.ellipse(64, 64, 18, 52, 0.25, 0, Math.PI * 2);
+cpCtx.fill();
+cpCtx.strokeStyle = 'rgba(10, 12, 15, 0.9)';
+cpCtx.lineWidth = 5;
+cpCtx.beginPath();
+cpCtx.moveTo(60, 5);
+cpCtx.lineTo(80, 120);
+cpCtx.moveTo(20, 95);
+cpCtx.lineTo(115, 80);
+cpCtx.stroke();
+const crackPatchTex = new THREE.CanvasTexture(crackPatchCanvas);
+const crackPatchMesh = new THREE.Mesh(
+  crackPatchGeo,
+  new THREE.MeshBasicMaterial({ map: crackPatchTex, transparent: true })
+);
+crackPatchMesh.rotation.x = -Math.PI / 2;
+crackPatchMesh.position.set(1.02, 0.0255, -0.82);
+scene.add(crackPatchMesh);
+
+// 4. Street Manholes (Frame 1-3 pothole at X=3.85, Z=-2.44 and Frame 4 center manhole at X=5.68, Z=-1.87)
+const roadPothole = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.68, 0.68),
+  new THREE.MeshStandardMaterial({
+    map: darkManholeTex,
+    transparent: true,
+    roughness: 0.85
+  })
+);
+roadPothole.rotation.x = -Math.PI / 2;
+roadPothole.position.set(3.85, 0.005, -2.44);
+scene.add(roadPothole);
+
+const centerManhole = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.66, 0.66),
+  new THREE.MeshStandardMaterial({
+    map: ironManholeTex,
+    transparent: true,
+    roughness: 0.52,
+    metalness: 0.45
+  })
+);
+centerManhole.rotation.x = -Math.PI / 2;
+centerManhole.position.set(5.68, 0.006, -1.87);
+scene.add(centerManhole);
+
+// 5. White Crosswalk Stripes in Frame 5 (t = 14.25)
+const stripeMat = new THREE.MeshStandardMaterial({
+  color: 0x9aa2ad,
+  roughness: 0.72,
+  metalness: 0.05,
+  transparent: true,
+  opacity: 0.68
+});
+// Stripes on right of robot path at X ~ 13.8..16.2, Z ~ -2.8..-0.5
+const stripePositions = [
+  { x: 14.5, z: -2.45, w: 1.9, d: 0.32, ry: 0.14 },
+  { x: 15.8, z: -3.20, w: 1.7, d: 0.28, ry: 0.14 },
+  { x: 12.1, z: -5.45, w: 1.5, d: 0.25, ry: 0.18 }
+];
+for (const sp of stripePositions) {
+  const sm = new THREE.Mesh(new THREE.PlaneGeometry(sp.w, sp.d), stripeMat);
+  sm.rotation.x = -Math.PI / 2;
+  sm.rotation.z = sp.ry;
+  sm.position.set(sp.x, 0.005, sp.z);
+  scene.add(sm);
+}
+
+// ============================================================================
+// Far Sidewalk, Curb Cut, Storm Drain & Planter Hedge (Frames 5 & 6)
+// ============================================================================
+const farSidewalkGroup = new THREE.Group();
+scene.add(farSidewalkGroup);
+
+// Far sidewalk slab extending from X=16.2..23.5 and Z=-3.2..-55 (Y_sim = 3.2..55)
+const farSidewalkShape = new THREE.Shape();
+// In Shape coords (x, z_three)
+farSidewalkShape.moveTo(17.5, -2.5);
+farSidewalkShape.quadraticCurveTo(16.1, -3.5, 15.8, -5.5);
+farSidewalkShape.lineTo(16.2, -55.0);
+farSidewalkShape.lineTo(24.0, -55.0);
+farSidewalkShape.lineTo(24.0, -2.5);
+farSidewalkShape.closePath();
+
+const farSidewalkGeo = new THREE.ExtrudeGeometry(farSidewalkShape, {
+  depth: 0.08,
+  bevelEnabled: true,
+  bevelThickness: 0.02,
+  bevelSize: 0.04,
+  bevelSegments: 2
+});
+farSidewalkGeo.rotateX(Math.PI / 2);
+const farSidewalkMesh = new THREE.Mesh(farSidewalkGeo, sidewalkMat);
+farSidewalkMesh.position.y = 0.06;
+scene.add(farSidewalkMesh);
+
+// Ramp apron where robot drives onto far sidewalk at (X=16.5..18.5, Z=-3.8..-6.2)
+const rampApron = new THREE.Mesh(
+  new THREE.BoxGeometry(2.6, 0.06, 3.2),
+  sidewalkMat
+);
+rampApron.position.set(17.2, 0.02, -4.6);
+rampApron.rotation.z = 0.03;
+rampApron.rotation.y = -0.15;
+scene.add(rampApron);
+
+// Dark Storm Drain Curb Inlet on the left of the far curb in Frame 5 (X=15.65, Z=-5.65)
+const drainHole = new THREE.Mesh(
+  new THREE.BoxGeometry(0.35, 0.14, 1.35),
+  new THREE.MeshBasicMaterial({ color: 0x050608 })
+);
+drainHole.position.set(15.68, 0.05, -5.65);
+drainHole.rotation.y = -0.15;
+scene.add(drainHole);
+
+const drainTopSlab = new THREE.Mesh(
+  new THREE.BoxGeometry(0.55, 0.05, 1.55),
+  curbMat
+);
+drainTopSlab.position.set(15.75, 0.12, -5.65);
+drainTopSlab.rotation.y = -0.15;
+scene.add(drainTopSlab);
+
+// Dark asphalt/grate patch right in front of the storm drain
+const drainGrate = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.55, 1.45),
+  new THREE.MeshBasicMaterial({ color: 0x08090c })
+);
+drainGrate.rotation.x = -Math.PI / 2;
+drainGrate.rotation.z = -0.15;
+drainGrate.position.set(15.48, 0.008, -5.62);
+scene.add(drainGrate);
+
+// Weathered yellow tactile pad on far curb ramp (X=16.5, Z=-4.2)
+const farPad = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.65, 1.35),
+  padMat
+);
+farPad.rotation.x = -Math.PI / 2;
+farPad.rotation.z = -0.25;
+farPad.position.set(16.45, 0.056, -4.25);
+scene.add(farPad);
+
+// Utility Vault Cover on the right side of the far sidewalk in Frame 6 (X=19.95, Z=-7.35)
+const vaultCover = new THREE.Mesh(
+  new THREE.BoxGeometry(0.52, 0.015, 1.45),
+  new THREE.MeshStandardMaterial({ color: 0x454a52, roughness: 0.6, metalness: 0.3 })
+);
+vaultCover.position.set(19.95, 0.062, -7.45);
+vaultCover.rotation.y = -0.05;
+scene.add(vaultCover);
+
+const vaultRim = new THREE.Mesh(
+  new THREE.BoxGeometry(0.58, 0.012, 1.52),
+  new THREE.MeshBasicMaterial({ color: 0x181a1e })
+);
+vaultRim.position.set(19.95, 0.060, -7.45);
+vaultRim.rotation.y = -0.05;
+scene.add(vaultRim);
+
+// Low concrete planter curb & Dark Green Hedge in front of Braman Showroom (X=20.7..22.1, Z=-5.2..-44)
+const planterCurb = new THREE.Mesh(
+  new THREE.BoxGeometry(0.22, 0.16, 40),
+  curbMat
+);
+planterCurb.position.set(20.65, 0.11, -25.0);
+planterCurb.rotation.y = -0.04;
+scene.add(planterCurb);
+
+// Dense landscaped hedge
+const hedgeCanvas = document.createElement('canvas');
+hedgeCanvas.width = hedgeCanvas.height = 256;
+const hctx = hedgeCanvas.getContext('2d');
+const hrng = createSeededRandom(707);
+hctx.fillStyle = '#1b2814';
+hctx.fillRect(0, 0, 256, 256);
+for (let i = 0; i < 1800; i++) {
+  const x = hrng() * 256;
+  const y = hrng() * 256;
+  const r = 2 + hrng() * 6;
+  const g = Math.floor(32 + hrng() * 48);
+  hctx.fillStyle = `rgb(${Math.floor(g * 0.68)},${g},${Math.floor(g * 0.42)})`;
+  hctx.beginPath();
+  hctx.arc(x, y, r, 0, Math.PI * 2);
+  hctx.fill();
+}
+const hedgeTex = new THREE.CanvasTexture(hedgeCanvas);
+hedgeTex.wrapS = hedgeTex.wrapT = THREE.RepeatWrapping;
+hedgeTex.repeat.set(16, 2);
+hedgeTex.colorSpace = THREE.SRGBColorSpace;
+
+const hedgeMat = new THREE.MeshStandardMaterial({
+  map: hedgeTex,
+  bumpMap: hedgeTex,
+  bumpScale: 0.04,
+  roughness: 0.88,
+  metalness: 0.02
+});
+const hedgeMesh = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.78, 39.5), hedgeMat);
+hedgeMesh.position.set(21.35, 0.42, -25.0);
+hedgeMesh.rotation.y = -0.04;
+scene.add(hedgeMesh);
+
+// ============================================================================
+// Braman Hyundai Dealership Building (Showroom, Columns, Cars, Signage)
+// ============================================================================
+const dealershipGroup = new THREE.Group();
+// Place dealership corner at (X=22.1, Z=-5.4) extending along -Z (with slight angle matching avenue)
+dealershipGroup.position.set(22.1, 0.0, -5.4);
+dealershipGroup.rotation.y = -0.04;
+scene.add(dealershipGroup);
+
+const showroomLength = 40.0;
+const showroomDepth = 9.5;
+const groundFloorH = 4.65;
+const fasciaH = 3.1;
+
+// Interior Floor
+const showroomFloor = new THREE.Mesh(
+  new THREE.PlaneGeometry(showroomDepth, showroomLength),
+  new THREE.MeshStandardMaterial({ color: 0xd8cfc4, roughness: 0.3, metalness: 0.1 })
+);
+showroomFloor.rotation.x = -Math.PI / 2;
+showroomFloor.position.set(showroomDepth / 2, 0.08, -showroomLength / 2);
+dealershipGroup.add(showroomFloor);
+
+// Interior Bright Ceiling with Recessed Downlights (emissive so it glows warmly at night)
+const ceilingTex = createShowroomCeilingTexture();
+const showroomCeiling = new THREE.Mesh(
+  new THREE.PlaneGeometry(showroomDepth, showroomLength),
+  new THREE.MeshBasicMaterial({ map: ceilingTex, side: THREE.DoubleSide })
+);
+showroomCeiling.rotation.x = Math.PI / 2;
+showroomCeiling.position.set(showroomDepth / 2, groundFloorH - 0.08, -showroomLength / 2);
+dealershipGroup.add(showroomCeiling);
+
+// Interior Back Wall (warm beige/cream lit wall)
+const backWallCanvas = document.createElement('canvas');
+backWallCanvas.width = 512; backWallCanvas.height = 128;
+const bwCtx = backWallCanvas.getContext('2d');
+const bwGrad = bwCtx.createLinearGradient(0, 0, 0, 128);
+bwGrad.addColorStop(0, '#e8d5be');
+bwGrad.addColorStop(0.6, '#cbb398');
+bwGrad.addColorStop(1, '#8c7865');
+bwCtx.fillStyle = bwGrad;
+bwCtx.fillRect(0, 0, 512, 128);
+// Interior banners & doorways
+bwCtx.fillStyle = '#25488e';
+bwCtx.fillRect(90, 28, 36, 52);
+bwCtx.fillStyle = '#40444c';
+bwCtx.fillRect(210, 40, 80, 88);
+const backWallTex = new THREE.CanvasTexture(backWallCanvas);
+backWallTex.colorSpace = THREE.SRGBColorSpace;
+
+const showroomBackWall = new THREE.Mesh(
+  new THREE.PlaneGeometry(showroomLength, groundFloorH),
+  new THREE.MeshBasicMaterial({ map: backWallTex })
+);
+showroomBackWall.rotation.y = -Math.PI / 2;
+showroomBackWall.position.set(showroomDepth - 0.2, groundFloorH / 2, -showroomLength / 2);
+dealershipGroup.add(showroomBackWall);
+
+// Structural Columns & Window Mullions along the Glass Curtain Wall
+const colMat = new THREE.MeshStandardMaterial({
+  color: 0x7b7e84,
+  roughness: 0.55,
+  metalness: 0.2
+});
+const mullionMat = new THREE.MeshStandardMaterial({
+  color: 0x55585e,
+  roughness: 0.4,
+  metalness: 0.5
+});
+
+const numBays = 10;
+const bayW = showroomLength / numBays;
+for (let i = 0; i <= numBays; i++) {
+  const z = -i * bayW;
+  const col = new THREE.Mesh(new THREE.BoxGeometry(0.38, groundFloorH, 0.36), colMat);
+  col.position.set(0.0, groundFloorH / 2, z);
+  dealershipGroup.add(col);
+}
+
+// Horizontal mullions
+for (const mh of [2.55, 3.65]) {
+  const hBar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, showroomLength), mullionMat);
+  hBar.position.set(0.0, mh, -showroomLength / 2);
+  dealershipGroup.add(hBar);
+}
+
+// Upper translucent frosted spandrel glass band (y = 2.6..4.6)
+const upperGlassMat = new THREE.MeshStandardMaterial({
+  color: 0x9aa4b0,
+  emissive: 0x46484c,
+  emissiveIntensity: 0.55,
+  roughness: 0.25,
+  metalness: 0.1,
+  transparent: true,
+  opacity: 0.68
+});
+const upperGlass = new THREE.Mesh(
+  new THREE.PlaneGeometry(showroomLength, 2.0),
+  upperGlassMat
+);
+upperGlass.rotation.y = -Math.PI / 2;
+upperGlass.position.set(-0.02, 3.6, -showroomLength / 2);
+dealershipGroup.add(upperGlass);
+
+// Lower clear showroom glass (y = 0..2.6)
+const lowerGlassMat = new THREE.MeshPhysicalMaterial({
+  color: 0xddeeff,
+  roughness: 0.08,
+  metalness: 0.1,
+  transmission: 0.82,
+  transparent: true,
+  opacity: 0.26
+});
+const lowerGlass = new THREE.Mesh(
+  new THREE.PlaneGeometry(showroomLength, 2.6),
+  lowerGlassMat
+);
+lowerGlass.rotation.y = -Math.PI / 2;
+lowerGlass.position.set(-0.03, 1.3, -showroomLength / 2);
+dealershipGroup.add(lowerGlass);
+
+// Matte-Black Fascia Overhang Band above Showroom (y = 4.65..7.75)
+const fasciaMat = new THREE.MeshStandardMaterial({
+  color: 0x050608,
+  roughness: 0.85,
+  metalness: 0.1
+});
+const fasciaBox = new THREE.Mesh(
+  new THREE.BoxGeometry(1.4, fasciaH, showroomLength + 0.6),
+  fasciaMat
+);
+fasciaBox.position.set(-0.45, groundFloorH + fasciaH / 2, -showroomLength / 2 + 0.2);
+dealershipGroup.add(fasciaBox);
+
+// Illuminated "BRAMAN" Sign on the Right End of the Black Fascia
+const bramanTex = createSignTexture({
+  text: 'BRAMAN',
+  bgColor: '#050608',
+  textColor: '#ffffff',
+  glowColor: '#88ccff',
+  width: 512,
+  height: 128,
+  font: '900 84px Arial, Helvetica, sans-serif'
+});
+const bramanSignMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(5.2, 1.25),
+  new THREE.MeshBasicMaterial({ map: bramanTex })
+);
+bramanSignMesh.rotation.y = -Math.PI / 2;
+bramanSignMesh.position.set(-1.16, 5.85, -3.1);
+dealershipGroup.add(bramanSignMesh);
+
+// Illuminated "HYUNDAI" Sign further Left on the Black Fascia (visible in Frame 4)
+const hyundaiTex = createSignTexture({
+  text: 'HYUNDAI',
+  bgColor: '#050608',
+  textColor: '#d8ecff',
+  glowColor: '#2575ff',
+  width: 640,
+  height: 128,
+  font: 'bold 74px Arial, Helvetica, sans-serif',
+  drawHyundaiLogo: true
+});
+const hyundaiSignMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(6.8, 1.3),
+  new THREE.MeshBasicMaterial({ map: hyundaiTex })
+);
+hyundaiSignMesh.rotation.y = -Math.PI / 2;
+hyundaiSignMesh.position.set(-1.16, 5.85, -18.5);
+dealershipGroup.add(hyundaiSignMesh);
+
+// Upper Garage Deck above Left Side of Dealership with Blue LED Strip Lighting (visible in Frame 4 & 6)
+const garageDeckGroup = new THREE.Group();
+garageDeckGroup.position.set(1.0, groundFloorH + fasciaH, -26.0);
+dealershipGroup.add(garageDeckGroup);
+
+const garageSlabMat = new THREE.MeshStandardMaterial({ color: 0x3a3e48, roughness: 0.7 });
+for (let lvl = 0; lvl < 2; lvl++) {
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(8.0, 0.65, 24.0), garageSlabMat);
+  slab.position.set(2.0, lvl * 2.8 + 1.2, 0);
+  garageDeckGroup.add(slab);
+
+  // Glowing blue LED accent strip
+  const blueStrip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, 0.14, 23.5),
+    new THREE.MeshBasicMaterial({ color: 0x2b68ff })
+  );
+  blueStrip.position.set(-2.02, lvl * 2.8 + 0.9, 0);
+  garageDeckGroup.add(blueStrip);
+}
+
+// Showroom Cars Parked Inside Behind the Glass (Blue, Red, White, Silver)
+function createShowroomCar(colorHex, isSUV = false) {
+  const car = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: colorHex,
+    roughness: 0.2,
+    metalness: 0.65
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x11161d,
+    roughness: 0.1,
+    metalness: 0.8
+  });
+
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(4.2, isSUV ? 0.82 : 0.68, 1.78), bodyMat);
+  lower.position.y = isSUV ? 0.62 : 0.52;
+  car.add(lower);
+
+  const cabin = new THREE.Mesh(
+    new THREE.BoxGeometry(isSUV ? 2.6 : 2.2, isSUV ? 0.68 : 0.56, 1.56),
+    glassMat
+  );
+  cabin.position.set(isSUV ? -0.2 : -0.1, isSUV ? 1.25 : 1.05, 0);
+  car.add(cabin);
+
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(isSUV ? 2.4 : 1.9, 0.08, 1.52),
+    bodyMat
+  );
+  roof.position.set(isSUV ? -0.2 : -0.1, isSUV ? 1.60 : 1.34, 0);
+  car.add(roof);
+
+  // Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 16);
+  wheelGeo.rotateX(Math.PI / 2);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.8 });
+  for (const wx of [-1.3, 1.3]) {
+    for (const wz of [-0.85, 0.85]) {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(wx, 0.32, wz);
+      car.add(w);
+    }
+  }
+  return car;
+}
+
+const blueShowroomCar = createShowroomCar(0x1f45b8, false);
+blueShowroomCar.position.set(2.3, 0.08, -4.2);
+blueShowroomCar.rotation.y = Math.PI / 2 + 0.35;
+dealershipGroup.add(blueShowroomCar);
+
+const redShowroomCar = createShowroomCar(0xc81d25, true);
+redShowroomCar.position.set(2.5, 0.08, -8.8);
+redShowroomCar.rotation.y = Math.PI / 2 + 0.25;
+dealershipGroup.add(redShowroomCar);
+
+const whiteShowroomCar = createShowroomCar(0xeef2f6, false);
+whiteShowroomCar.position.set(2.6, 0.08, -14.2);
+whiteShowroomCar.rotation.y = Math.PI / 2 + 0.30;
+dealershipGroup.add(whiteShowroomCar);
+
+const silverShowroomCar = createShowroomCar(0x9aa2ad, true);
+silverShowroomCar.position.set(2.6, 0.08, -20.5);
+silverShowroomCar.rotation.y = Math.PI / 2 + 0.20;
+dealershipGroup.add(silverShowroomCar);
+
+// Warm Interior Showroom PointLights
+for (const lz of [-4.5, -11.5, -19.5, -28.5]) {
+  const pl = new THREE.PointLight(0xffdfba, 9.5, 16, 1.4);
+  pl.position.set(2.2, 3.8, lz);
+  dealershipGroup.add(pl);
+}
+
+// ============================================================================
+// Surrounding Buildings, High-Rise Condo Tower & Distant Avenue Buildings
+// ============================================================================
+// 1. White 2-Story Stucco Wall Section immediately to the right of BRAMAN (X=25.2, Z=-5.4..-0.2)
+const whiteWallMat = new THREE.MeshStandardMaterial({
+  color: 0x62656e,
+  roughness: 0.82,
+  metalness: 0.05
+});
+const whiteBuilding = new THREE.Mesh(new THREE.BoxGeometry(5.5, 9.4, 5.4), whiteWallMat);
+whiteBuilding.position.set(25.8, 4.7, -2.8);
+scene.add(whiteBuilding);
+
+// Small dark tree/bush in front of the white building (visible in Frames 1-5)
+const treeGroup = new THREE.Group();
+treeGroup.position.set(22.4, 0.0, -2.4);
+scene.add(treeGroup);
+const trunk = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.12, 0.16, 1.8, 8),
+  new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.9 })
+);
+trunk.position.y = 0.9;
+treeGroup.add(trunk);
+const canopy = new THREE.Mesh(
+  new THREE.SphereGeometry(1.35, 10, 8),
+  new THREE.MeshStandardMaterial({ color: 0x0b1309, roughness: 0.95 })
+);
+canopy.position.y = 2.2;
+canopy.scale.set(1.0, 1.15, 1.1);
+treeGroup.add(canopy);
+const baseShrub = new THREE.Mesh(
+  new THREE.BoxGeometry(1.4, 0.75, 1.8),
+  new THREE.MeshStandardMaterial({ color: 0x090f08, roughness: 0.95 })
+);
+baseShrub.position.y = 0.38;
+treeGroup.add(baseShrub);
+
+// 2. Tall White/Grey High-Rise Residential Tower Rising Behind the White Wall
+const highRiseTex = createHighRiseTexture();
+const highRiseMat = new THREE.MeshStandardMaterial({
+  map: highRiseTex,
+  roughness: 0.75,
+  metalness: 0.1
+});
+const highRiseTower = new THREE.Mesh(new THREE.BoxGeometry(9.0, 56.0, 7.0), highRiseMat);
+highRiseTower.position.set(34.5, 28.0, -3.1);
+scene.add(highRiseTower);
+
+// 3. Twin Mid-Rise Towers Behind Braman Showroom (visible in Frames 1-3 at u=0.18..0.28)
+function createTwinTower() {
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#24262c';
+  ctx.fillRect(0, 0, 128, 256);
+  // Bright vertical window strip in the center
+  for (let y = 16; y < 240; y += 14) {
+    ctx.fillStyle = '#e6ecf8';
+    ctx.fillRect(48, y, 28, 9);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(
+    new THREE.BoxGeometry(4.5, 18.0, 4.5),
+    new THREE.MeshBasicMaterial({ map: tex })
+  );
+}
+const twin1 = createTwinTower();
+twin1.position.set(40.0, 9.0, -17.5);
+scene.add(twin1);
+const twin2 = createTwinTower();
+twin2.position.set(41.0, 8.5, -12.5);
+scene.add(twin2);
+
+// 4. Distant Illuminated Red & Blue Building Down the Avenue (prominent in Frame 6!)
+const distantBldgGroup = new THREE.Group();
+distantBldgGroup.position.set(17.5, 0.0, -54.0);
+scene.add(distantBldgGroup);
+
+// Main mid-rise body with warm horizontal lit tiers
+const distBldgCanvas = document.createElement('canvas');
+distBldgCanvas.width = 256; distBldgCanvas.height = 256;
+const dbCtx = distBldgCanvas.getContext('2d');
+dbCtx.fillStyle = '#1a1514';
+dbCtx.fillRect(0, 0, 256, 256);
+for (let r = 0; r < 6; r++) {
+  const y = 35 + r * 32;
+  const g = dbCtx.createLinearGradient(0, y, 256, y);
+  g.addColorStop(0, '#44261c');
+  g.addColorStop(0.5, '#c87e58');
+  g.addColorStop(1, '#3a2218');
+  dbCtx.fillStyle = g;
+  dbCtx.fillRect(18, y, 220, 18);
+}
+const distBldgTex = new THREE.CanvasTexture(distBldgCanvas);
+distBldgTex.colorSpace = THREE.SRGBColorSpace;
+
+const distBldgMesh = new THREE.Mesh(
+  new THREE.BoxGeometry(6.5, 16.5, 8.0),
+  new THREE.MeshBasicMaterial({ map: distBldgTex })
+);
+distBldgMesh.position.set(0, 8.25, 0);
+distantBldgGroup.add(distBldgMesh);
+
+// Bright Red Vertical Neon Blade Sign on left side of distant building
+const redBladeSign = new THREE.Mesh(
+  new THREE.BoxGeometry(0.85, 6.2, 0.85),
+  new THREE.MeshBasicMaterial({ color: 0xff1e26 })
+);
+redBladeSign.position.set(-2.9, 7.2, 3.8);
+distantBldgGroup.add(redBladeSign);
+
+// Bright Glowing Blue/White Rooftop Sign
+const roofSign = new THREE.Mesh(
+  new THREE.BoxGeometry(5.6, 1.35, 1.2),
+  new THREE.MeshBasicMaterial({ color: 0xbbe0ff })
+);
+roofSign.position.set(0.2, 16.6, 3.8);
+distantBldgGroup.add(roofSign);
+
+// Bright White Spotlight Dot on Right Top Corner of Distant Building
+const roofSpot = new THREE.Mesh(
+  new THREE.SphereGeometry(0.45, 8, 8),
+  new THREE.MeshBasicMaterial({ color: 0xffffff })
+);
+roofSpot.position.set(2.8, 15.2, 4.1);
+distantBldgGroup.add(roofSpot);
+
+// 5. Right Side of Intersection (White Guardrail Fence, Tan Wall, Streetlights, Background Apt)
+const guardrailMat = new THREE.MeshStandardMaterial({ color: 0xb8bec8, roughness: 0.5 });
+for (let gz = 0.0; gz <= 13.5; gz += 1.5) {
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.08), guardrailMat);
+  post.position.set(24.5, 0.48, gz);
+  scene.add(post);
+}
+for (const ry of [0.42, 0.85]) {
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 14.0), guardrailMat);
+  rail.position.set(24.5, ry, 6.8);
+  scene.add(rail);
+}
+
+// White picket fence extending along the side alley in Frame 5 (X=22..29, Z=-1.5)
+const alleyFence = new THREE.Mesh(
+  new THREE.BoxGeometry(7.0, 1.65, 0.12),
+  new THREE.MeshStandardMaterial({ color: 0x9ea4ae, roughness: 0.7 })
+);
+alleyFence.position.set(23.8, 0.82, -0.5);
+scene.add(alleyFence);
+
+// Low tan wall on right side of intersection (visible in Frames 1-3 at u=0.73..0.80)
+const tanWall = new THREE.Mesh(
+  new THREE.BoxGeometry(2.5, 2.8, 6.5),
+  new THREE.MeshStandardMaterial({ color: 0x5c5048, roughness: 0.85 })
+);
+tanWall.position.set(27.5, 1.4, 10.5);
+scene.add(tanWall);
+
+// Background dark apartment building on the right (u=0.72..0.85, v=0.25..0.42)
+const rightAptCanvas = document.createElement('canvas');
+rightAptCanvas.width = 256; rightAptCanvas.height = 256;
+const raCtx = rightAptCanvas.getContext('2d');
+raCtx.fillStyle = '#181a1f';
+raCtx.fillRect(0, 0, 256, 256);
+for (let r = 0; r < 10; r++) {
+  for (let c = 0; c < 8; c++) {
+    raCtx.fillStyle = ((r + c) % 5 === 0) ? '#484e58' : '#0c0d10';
+    raCtx.fillRect(16 + c * 28, 16 + r * 22, 16, 12);
+  }
+}
+const rightAptTex = new THREE.CanvasTexture(rightAptCanvas);
+const rightApt = new THREE.Mesh(
+  new THREE.BoxGeometry(8.0, 18.0, 14.0),
+  new THREE.MeshBasicMaterial({ map: rightAptTex })
+);
+rightApt.position.set(44.0, 9.0, 14.0);
+scene.add(rightApt);
+
+// Bright Cool-White Streetlights on the Right Side of the Intersection (u=0.65 & 0.68 in Frames 1-3)
+function addDistantPoleLight(x, z, h) {
+  const pole = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.09, h, 8),
+    new THREE.MeshStandardMaterial({ color: 0x505660, roughness: 0.6 })
+  );
+  pole.position.set(x, h / 2, z);
+  scene.add(pole);
+
+  const bulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.24, 10, 10),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  bulb.position.set(x, h, z);
+  scene.add(bulb);
+
+  const glow = new THREE.PointLight(0xd8ecff, 6.0, 22, 1.5);
+  glow.position.set(x, h - 0.2, z);
+  scene.add(glow);
+}
+addDistantPoleLight(26.5, 3.8, 4.4);
+addDistantPoleLight(28.0, 5.2, 4.1);
+
+// ============================================================================
+// Traffic Poles, Mast Arms & State-Driven Signals
+// ============================================================================
+const metalPoleMat = new THREE.MeshStandardMaterial({
+  color: 0x6c727c,
+  roughness: 0.48,
+  metalness: 0.55
+});
+const darkSignalMat = new THREE.MeshStandardMaterial({
+  color: 0x15171b,
+  roughness: 0.7
+});
+
+// 1. Far Curb Corner Traffic Pole in front of BRAMAN (X=16.0, Z=-6.80)
+const cornerPoleGroup = new THREE.Group();
+cornerPoleGroup.position.set(16.0, 0.0, -6.80);
+scene.add(cornerPoleGroup);
+
+const cornerPoleShaft = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.11, 0.14, 7.2, 12),
+  metalPoleMat
+);
+cornerPoleShaft.position.y = 3.6;
+cornerPoleGroup.add(cornerPoleShaft);
+
+// High curved mast arm extending up and towards -X/+Z (visible in Frames 1-4)
+const highArm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.07, 0.10, 5.5, 10),
+  metalPoleMat
+);
+highArm.position.set(-1.6, 7.6, -0.3);
+highArm.rotation.z = 0.68;
+highArm.rotation.y = 0.2;
+cornerPoleGroup.add(highArm);
+
+// Upper signal housing on high arm
+const highSigBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.85, 0.32), darkSignalMat);
+highSigBox.position.set(-0.9, 6.4, -0.15);
+cornerPoleGroup.add(highSigBox);
+const highRedBulb = new THREE.Mesh(
+  new THREE.SphereGeometry(0.11, 8, 8),
+  new THREE.MeshBasicMaterial({ color: 0xff3b20 })
+);
+highRedBulb.position.set(-1.05, 6.55, -0.15);
+cornerPoleGroup.add(highRedBulb);
+
+// Mid-level signal housing on corner pole
+const midSigBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.75, 0.32), darkSignalMat);
+midSigBox.position.set(-0.22, 3.6, 0.22);
+cornerPoleGroup.add(midSigBox);
+const midRedBulb = new THREE.Mesh(
+  new THREE.SphereGeometry(0.12, 10, 10),
+  new THREE.MeshBasicMaterial({ color: 0xff2815 })
+);
+midRedBulb.position.set(-0.36, 3.72, 0.22);
+cornerPoleGroup.add(midRedBulb);
+
+// Pedestrian Signal Box on Corner Pole (switches to WALK + countdown in Frame 5!)
+const pedBox = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.52), darkSignalMat);
+pedBox.position.set(0.0, 2.78, -0.35);
+cornerPoleGroup.add(pedBox);
+
+const pedWalkBulb = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.22, 0.28),
+  new THREE.MeshBasicMaterial({ color: 0xddeeff })
+);
+pedWalkBulb.rotation.y = -Math.PI / 2;
+pedWalkBulb.position.set(-0.15, 2.78, -0.38);
+cornerPoleGroup.add(pedWalkBulb);
+
+// 2. Center Intersection Mast Arm ("NW 2 Av" sign + 2 Traffic Lights that turn RED -> GREEN at t=6.2s)
+const centerMastGroup = new THREE.Group();
+centerMastGroup.position.set(22.0, 0.0, 5.2);
+scene.add(centerMastGroup);
+
+const centerPole = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.10, 0.13, 6.0, 10),
+  metalPoleMat
+);
+centerPole.position.set(0, 3.0, 0);
+centerMastGroup.add(centerPole);
+
+const centerArm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.06, 0.09, 5.2, 10),
+  metalPoleMat
+);
+centerArm.rotation.z = Math.PI / 2;
+centerArm.rotation.y = Math.PI / 2;
+centerArm.position.set(0, 5.65, -2.5);
+centerMastGroup.add(centerArm);
+
+// Glowing "NW 2 Av" green street sign
+const nw2AvTex = createSignTexture({
+  text: 'NW 2 Av',
+  bgColor: '#0f7a58',
+  textColor: '#e8fff6',
+  glowColor: '#22ffaa',
+  width: 256,
+  height: 64,
+  font: 'bold 42px Arial, sans-serif',
+  border: '#a8ffd8'
+});
+const nw2AvSign = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.15, 0.32),
+  new THREE.MeshBasicMaterial({ map: nw2AvTex, side: THREE.DoubleSide })
+);
+nw2AvSign.rotation.y = -Math.PI / 2;
+nw2AvSign.position.set(-0.08, 5.75, -3.15);
+centerMastGroup.add(nw2AvSign);
+
+// Left & Right Signal Bulbs on Center Mast Arm
+const centerSigMatRed = new THREE.MeshBasicMaterial({ color: 0xff2218 });
+const centerSigMatGreen = new THREE.MeshBasicMaterial({ color: 0x20ff88 });
+
+const centerSigLeft = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 10), centerSigMatRed);
+centerSigLeft.position.set(-0.1, 5.62, -4.35);
+centerMastGroup.add(centerSigLeft);
+
+const centerSigRight = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 10), centerSigMatRed);
+centerSigRight.position.set(-0.1, 5.52, -1.75);
+centerMastGroup.add(centerSigRight);
+
+// 3. Near-Right High Overhead Mast Arm (visible in upper-right of Frames 1-3)
+const nearRightMast = new THREE.Group();
+nearRightMast.position.set(8.5, 0.0, 0.0);
+scene.add(nearRightMast);
+
+const nrArm = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.06, 0.08, 6.2, 8),
+  darkSignalMat
+);
+// Spans from (0, 3.85, 6.5) to (0, 5.5, 11.8)
+nrArm.position.set(0, 4.68, 9.15);
+nrArm.rotation.x = -0.30;
+nearRightMast.add(nrArm);
+
+// Green street sign ("NE 20 St") on near-right mast arm
+const ne20Tex = createSignTexture({
+  text: 'NE 20 St',
+  bgColor: '#0d5e3a',
+  textColor: '#c8f8dc',
+  glowColor: '#18c878',
+  width: 256,
+  height: 64,
+  font: 'bold 40px Arial, sans-serif',
+  border: '#68d898'
+});
+const ne20Sign = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.15, 0.28),
+  new THREE.MeshBasicMaterial({ map: ne20Tex, side: THREE.DoubleSide })
+);
+ne20Sign.rotation.y = -Math.PI / 2;
+ne20Sign.rotation.x = -0.30;
+ne20Sign.position.set(-0.08, 4.52, 8.65);
+nearRightMast.add(ne20Sign);
+
+// Two glowing red/orange traffic signals on near-right mast arm
+const nrLightLeft = new THREE.Mesh(
+  new THREE.SphereGeometry(0.13, 10, 10),
+  new THREE.MeshBasicMaterial({ color: 0xff4518 })
+);
+nrLightLeft.position.set(-0.1, 3.92, 6.95);
+nearRightMast.add(nrLightLeft);
+
+const nrLightRight = new THREE.Mesh(
+  new THREE.SphereGeometry(0.22, 12, 12),
+  new THREE.MeshBasicMaterial({ color: 0xff521b })
+);
+nrLightRight.position.set(-0.1, 5.38, 11.45);
+nearRightMast.add(nrLightRight);
+
+// ============================================================================
+// Moving Vehicles (Silver Sedan at t=0.94, Red Pickup at t=4.12, Distant Car at t=7.50)
+// ============================================================================
+// 1. Silver Sedan (Toyota Corolla style)
+function buildSilverSedan() {
+  const group = new THREE.Group();
+
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x8c929c,
+    roughness: 0.26,
+    metalness: 0.55
+  });
+  const darkTrimMat = new THREE.MeshStandardMaterial({
+    color: 0x0c0e12,
+    roughness: 0.6,
+    metalness: 0.2
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x0e131a,
+    roughness: 0.12,
+    metalness: 0.85
+  });
+
+  // Main lower body (length along +X = 4.55m, width along Z = 1.80m)
+  const mainBody = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.68, 1.80), bodyMat);
+  mainBody.position.set(0, 0.52, 0);
+  group.add(mainBody);
+
+  // Sloped front hood & bumper
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.45, 1.76), bodyMat);
+  hood.position.set(1.65, 0.56, 0);
+  hood.rotation.z = -0.14;
+  group.add(hood);
+
+  // Wide black Corolla front lower grille
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.36, 1.38), darkTrimMat);
+  grille.position.set(2.22, 0.38, 0);
+  group.add(grille);
+
+  // Cabin greenhouse
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.56, 1.54), glassMat);
+  cabin.position.set(-0.22, 1.06, 0);
+  group.add(cabin);
+
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.08, 1.48), bodyMat);
+  roof.position.set(-0.25, 1.35, 0);
+  group.add(roof);
+
+  // Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.33, 0.33, 0.22, 16);
+  wheelGeo.rotateX(Math.PI / 2);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x16181c, roughness: 0.7 });
+  const hubMat = new THREE.MeshStandardMaterial({ color: 0x7a808a, roughness: 0.35, metalness: 0.6 });
+  for (const wx of [-1.38, 1.38]) {
+    for (const wz of [-0.86, 0.86]) {
+      const w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(wx, 0.33, wz);
+      group.add(w);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.24, 12), hubMat);
+      hub.rotation.x = Math.PI / 2;
+      hub.position.set(wx, 0.33, wz);
+      group.add(hub);
+    }
+  }
+
+  // Headlights (bright white + amber corner markers matching Frame 1)
+  const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const amberMat = new THREE.MeshBasicMaterial({ color: 0xff8822 });
+
+  const hlLeft = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.36), hlMat);
+  hlLeft.position.set(2.20, 0.64, -0.64);
+  group.add(hlLeft);
+
+  const hlRight = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.36), hlMat);
+  hlRight.position.set(2.20, 0.64, 0.64);
+  group.add(hlRight);
+
+  const ambLeft = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.10, 0.14), amberMat);
+  ambLeft.position.set(2.16, 0.64, -0.84);
+  group.add(ambLeft);
+
+  const ambRight = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.10, 0.14), amberMat);
+  ambRight.position.set(2.16, 0.64, 0.84);
+  group.add(ambRight);
+
+  // Headlight illumination on the asphalt
+  const carLight = new THREE.PointLight(0xddeeff, 8.0, 12, 1.5);
+  carLight.position.set(2.8, 0.65, 0);
+  group.add(carLight);
+
+  return group;
+}
+
+const silverSedan = buildSilverSedan();
+scene.add(silverSedan);
+
+// 2. Red Pickup Truck (Chevy Silverado / F-150 Crew Cab at t=4.12)
+function buildRedPickup() {
+  const group = new THREE.Group();
+
+  const redMat = new THREE.MeshStandardMaterial({
+    color: 0xd9181e,
+    roughness: 0.25,
+    metalness: 0.35
+  });
+  const blackArchMat = new THREE.MeshStandardMaterial({
+    color: 0x0d0f13,
+    roughness: 0.75,
+    metalness: 0.1
+  });
+  const chromeMat = new THREE.MeshStandardMaterial({
+    color: 0xc8d2de,
+    roughness: 0.18,
+    metalness: 0.88
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x090b0f,
+    roughness: 0.15,
+    metalness: 0.85
+  });
+
+  // Main truck bed & front hood body
+  const lowerBody = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.92, 2.02), redMat);
+  lowerBody.position.set(0, 0.96, 0);
+  group.add(lowerBody);
+
+  // Crew Cab upper greenhouse
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.45, 0.72, 1.86), redMat);
+  cab.position.set(-0.15, 1.68, 0);
+  group.add(cab);
+
+  // Dark side windows & windshield
+  const sideWin = new THREE.Mesh(new THREE.BoxGeometry(2.15, 0.52, 1.89), glassMat);
+  sideWin.position.set(-0.12, 1.68, 0);
+  group.add(sideWin);
+
+  const bPillar = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.56, 1.91), blackArchMat);
+  bPillar.position.set(-0.15, 1.68, 0);
+  group.add(bPillar);
+
+  // Prominent Black Wheel Arch Cutouts & Flares (matching Frame 2)
+  const frontWell = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.78, 2.08), blackArchMat);
+  frontWell.position.set(1.72, 0.75, 0);
+  group.add(frontWell);
+
+  const rearWell = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.78, 2.08), blackArchMat);
+  rearWell.position.set(-1.75, 0.75, 0);
+  group.add(rearWell);
+
+  // Chrome Front Bumper & Grille
+  const bumper = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 2.06), chromeMat);
+  bumper.position.set(2.78, 0.65, 0);
+  group.add(bumper);
+
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.48, 1.65), chromeMat);
+  grille.position.set(2.76, 1.12, 0);
+  group.add(grille);
+
+  // Stacked Headlights (Bright White + Amber Turn Signal)
+  const hlWhite = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, 0.24, 0.38),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  hlWhite.position.set(2.74, 1.18, 0.78);
+  group.add(hlWhite);
+
+  const hlWhiteL = hlWhite.clone();
+  hlWhiteL.position.z = -0.78;
+  group.add(hlWhiteL);
+
+  const hlAmber = new THREE.Mesh(
+    new THREE.BoxGeometry(0.26, 0.14, 0.42),
+    new THREE.MeshBasicMaterial({ color: 0xff7718 })
+  );
+  hlAmber.position.set(2.72, 1.32, 0.80);
+  group.add(hlAmber);
+
+  const hlAmberL = hlAmber.clone();
+  hlAmberL.position.z = -0.80;
+  group.add(hlAmberL);
+
+  // Large Dark Truck Tires
+  const tireGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.32, 18);
+  tireGeo.rotateX(Math.PI / 2);
+  for (const wx of [-1.75, 1.72]) {
+    for (const wz of [-0.92, 0.92]) {
+      const tire = new THREE.Mesh(tireGeo, blackArchMat);
+      tire.position.set(wx, 0.45, wz);
+      group.add(tire);
+    }
+  }
+
+  // Headlight glow
+  const truckLight = new THREE.PointLight(0xffe8cc, 10.0, 12, 1.5);
+  truckLight.position.set(3.3, 1.0, 0.5);
+  group.add(truckLight);
+
+  return group;
+}
+
+const redPickup = buildRedPickup();
+scene.add(redPickup);
+
+// 3. Distant Car Waiting on the Right in Frame 3 (t = 7.50)
+const distantCarGroup = new THREE.Group();
+scene.add(distantCarGroup);
+for (const dz of [-0.65, 0.65]) {
+  const dhl = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 10, 10),
+    new THREE.MeshBasicMaterial({ color: 0xe8f2ff })
+  );
+  dhl.position.set(dz, 0.68, 0);
+  distantCarGroup.add(dhl);
+}
+const distCarGlow = new THREE.PointLight(0x99bbff, 8.0, 14, 1.5);
+distCarGlow.position.set(0, 0.8, -1.2);
+distantCarGroup.add(distCarGlow);
+
+// ============================================================================
+// Delivery Robot Model (for cam=chase) + Robot Headlights
+// ============================================================================
+const robotGroup = new THREE.Group();
+scene.add(robotGroup);
+
+// Visual sub-group hidden when in first-person robot camera
+const robotVisuals = new THREE.Group();
+robotGroup.add(robotVisuals);
+
+const robotBodyMat = new THREE.MeshStandardMaterial({
+  color: 0xf0f4f8,
+  roughness: 0.35,
+  metalness: 0.1
+});
+const robotChassisMat = new THREE.MeshStandardMaterial({
+  color: 0x262930,
+  roughness: 0.7,
+  metalness: 0.2
+});
+
+// White/grey cargo body (~0.7 x 0.5 x 0.6m)
+const cargoBox = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.42, 0.48), robotBodyMat);
+cargoBox.position.set(0, 0.36, 0);
+robotVisuals.add(cargoBox);
+
+const lidBox = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.08, 0.46), new THREE.MeshStandardMaterial({ color: 0xd0d6de, roughness: 0.4 }));
+lidBox.position.set(0, 0.59, 0);
+robotVisuals.add(lidBox);
+
+const lowerChassis = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.14, 0.50), robotChassisMat);
+lowerChassis.position.set(0, 0.14, 0);
+robotVisuals.add(lowerChassis);
+
+// Camera visor on front
+const visor = new THREE.Mesh(
+  new THREE.BoxGeometry(0.05, 0.09, 0.32),
+  new THREE.MeshStandardMaterial({ color: 0x0a0c10, roughness: 0.15 })
+);
+visor.position.set(0.33, 0.456, 0);
+robotVisuals.add(visor);
+
+// Front headlight lenses & rear red LED strip
+for (const hz of [-0.16, 0.16]) {
+  const hlLens = new THREE.Mesh(
+    new THREE.SphereGeometry(0.032, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  hlLens.position.set(0.35, 0.36, hz);
+  robotVisuals.add(hlLens);
+}
+const tailStrip = new THREE.Mesh(
+  new THREE.BoxGeometry(0.02, 0.03, 0.36),
+  new THREE.MeshBasicMaterial({ color: 0xff2020 })
+);
+tailStrip.position.set(-0.35, 0.36, 0);
+robotVisuals.add(tailStrip);
+
+// 6 Wheels (3 per side)
+const robotWheels = [];
+const rWheelGeo = new THREE.CylinderGeometry(0.095, 0.095, 0.055, 16);
+rWheelGeo.rotateX(Math.PI / 2);
+for (const wx of [-0.24, 0.0, 0.24]) {
+  for (const wz of [-0.26, 0.26]) {
+    const rw = new THREE.Mesh(rWheelGeo, robotChassisMat);
+    rw.position.set(wx, 0.095, wz);
+    robotVisuals.add(rw);
+    robotWheels.push(rw);
+  }
+}
+
+// Antenna + Orange Safety Flag
+const antennaPole = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.006, 0.008, 1.05, 6),
+  new THREE.MeshStandardMaterial({ color: 0x222222 })
+);
+antennaPole.position.set(-0.28, 1.05, 0.18);
+robotVisuals.add(antennaPole);
+
+const flagShape = new THREE.Shape();
+flagShape.moveTo(0, 0);
+flagShape.lineTo(-0.26, 0.09);
+flagShape.lineTo(0, 0.18);
+flagShape.closePath();
+const flagMesh = new THREE.Mesh(
+  new THREE.ShapeGeometry(flagShape),
+  new THREE.MeshBasicMaterial({ color: 0xff5a00, side: THREE.DoubleSide })
+);
+flagMesh.position.set(-0.28, 1.38, 0.18);
+robotVisuals.add(flagMesh);
+
+// Robot Headlights (Active in both cam modes! Casts the exact cool-white ground pool)
+const headlightSpot = new THREE.SpotLight(0xd6ebff, 22.0, 18.0, Math.PI * 0.42, 0.68, 1.35);
+headlightSpot.position.set(0.15, 0.46, 0.0);
+const headlightTarget = new THREE.Object3D();
+headlightTarget.position.set(3.2, -0.15, 0.0);
+robotGroup.add(headlightSpot);
+robotGroup.add(headlightTarget);
+headlightSpot.target = headlightTarget;
+
+// Secondary near-ground pool light for the immediate concrete/tactile pad right in front of the robot
+const nearGroundLight = new THREE.SpotLight(0xd8ecff, 14.0, 5.5, Math.PI * 0.46, 0.72, 1.5);
+nearGroundLight.position.set(0.05, 0.48, 0.0);
+const nearTarget = new THREE.Object3D();
+nearTarget.position.set(1.15, -0.25, -0.12);
+robotGroup.add(nearGroundLight);
+robotGroup.add(nearTarget);
+nearGroundLight.target = nearTarget;
+
+// ============================================================================
+// Global Street & Ambient Lighting
+// ============================================================================
+const ambientLight = new THREE.AmbientLight(0x1f2430, 0.75);
+scene.add(ambientLight);
+
+const hemiLight = new THREE.HemisphereLight(0x1c2230, 0x101216, 0.55);
+scene.add(hemiLight);
+
+// Warm sodium streetlight glow on the left sidewalk (gives the warm amber tone on the left of Frames 1-3)
+const leftSodiumLight = new THREE.PointLight(0xff9b48, 6.5, 11.0, 1.6);
+leftSodiumLight.position.set(1.5, 2.8, -3.6);
+scene.add(leftSodiumLight);
+
+// Overhead intersection street illumination
+const intersectionLight = new THREE.PointLight(0xc8d8f0, 9.0, 28.0, 1.4);
+intersectionLight.position.set(8.5, 7.5, -1.5);
+scene.add(intersectionLight);
+
+// Far corner streetlight illumination
+const farCornerLight = new THREE.PointLight(0xdde8f8, 8.5, 24.0, 1.4);
+farCornerLight.position.set(17.5, 6.8, -5.5);
+scene.add(farCornerLight);
+
+// ============================================================================
+// Trajectory Interpolation & Scene Posing (window.seek)
+// ============================================================================
+function getPoseAtTime(t) {
+  const frames = trajData.frames;
+  if (!frames || frames.length === 0) {
+    return { x: 0, y: 0, yaw: 0, v: 0 };
+  }
+  const clampedT = Math.max(frames[0].t, Math.min(t, frames[frames.length - 1].t));
+
+  // Binary search or linear scan for interval
+  let idx = 0;
+  for (let i = 0; i < frames.length - 1; i++) {
+    if (clampedT >= frames[i].t && clampedT <= frames[i + 1].t) {
+      idx = i;
+      break;
+    }
+  }
+
+  const f0 = frames[idx];
+  const f1 = frames[Math.min(idx + 1, frames.length - 1)];
+  const dt = f1.t - f0.t;
+  const alpha = dt > 1e-6 ? (clampedT - f0.t) / dt : 0.0;
+
+  // Shortest-angle interpolation for yaw
+  let dyaw = f1.yaw - f0.yaw;
+  while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+  while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+
+  return {
+    x: THREE.MathUtils.lerp(f0.x, f1.x, alpha),
+    y: THREE.MathUtils.lerp(f0.y, f1.y, alpha),
+    yaw: f0.yaw + dyaw * alpha,
+    v: THREE.MathUtils.lerp(f0.v || 0, f1.v || 0, alpha)
+  };
+}
+
+let currentTime = 0.0;
+
+function updateSceneAtTime(t) {
+  currentTime = t;
+  const pose = getPoseAtTime(t);
+
+  // Convert sim (x, y, z=0) -> three (x, 0, -y)
+  const rx = pose.x;
+  const rz = -pose.y;
+  const ryaw = pose.yaw;
+
+  // Slightly elevate robot as it mounts the far sidewalk after x > 16.2m
+  const sidewalkLift = THREE.MathUtils.smoothstep(rx, 16.0, 17.5) * 0.055;
+
+  // Pose Robot Group
+  robotGroup.position.set(rx, sidewalkLift, rz);
+  robotGroup.rotation.y = ryaw;
+
+  // Spin robot wheels proportionally to x+y distance
+  const wheelAngle = (rx * 1.1) / 0.095;
+  for (const w of robotWheels) {
+    w.rotation.z = -wheelAngle;
+  }
+
+  // Pose Robot First-Person Camera
+  const camHeight = (trajData.camera && trajData.camera.height_m) ? trajData.camera.height_m : 0.456;
+  robotCamera.position.set(rx, camHeight + sidewalkLift, rz);
+  robotCamera.rotation.y = ryaw - Math.PI / 2;
+  robotCamera.rotation.x = THREE.MathUtils.degToRad(pitchDeg);
+  robotCamera.rotation.z = 0;
+
+  // Pose Chase Camera (3m behind and 1.4m above the robot)
+  const backDist = 3.0;
+  const upDist = 1.45;
+  chaseCamera.position.set(
+    rx - Math.cos(ryaw) * backDist,
+    sidewalkLift + upDist,
+    rz + Math.sin(ryaw) * backDist
+  );
+  chaseCamera.lookAt(
+    rx + Math.cos(ryaw) * 1.5,
+    sidewalkLift + 0.45,
+    rz - Math.sin(ryaw) * 1.5
+  );
+
+  // Toggle robot mesh visibility
+  robotVisuals.visible = (camMode === 'chase');
+  renderPass.camera = (camMode === 'chase') ? chaseCamera : robotCamera;
+
+  // Update Shader Uniforms
+  cameraLookPass.uniforms.uTime.value = t;
+  cameraLookPass.uniforms.uSpeed.value = Math.abs(pose.v);
+  cameraLookPass.uniforms.uIsRobotCam.value = (camMode === 'robot') ? 1.0 : 0.0;
+  // Lens dust orb is visible before the robot reaches the far curb
+  cameraLookPass.uniforms.uOrbAlpha.value = 1.0 - THREE.MathUtils.smoothstep(t, 12.0, 14.0);
+
+  // ==========================================================================
+  // Animate Moving Vehicles & Traffic Lights
+  // ==========================================================================
+  // 1. Silver Sedan (Frame 1 at t = 0.94):
+  // At t = 0.94: center at (X = 6.75, Z = +5.35), angled towards +Z and slightly -X
+  if (t >= -0.5 && t <= 2.6) {
+    silverSedan.visible = true;
+    const dt1 = t - 0.94;
+    const speed1 = 9.2;
+    const dirX = -0.26;
+    const dirZ = 0.965;
+    silverSedan.position.set(
+      6.75 + dirX * speed1 * dt1,
+      0.0,
+      5.35 + dirZ * speed1 * dt1
+    );
+    silverSedan.rotation.y = Math.atan2(-dirZ, dirX);
+  } else {
+    silverSedan.visible = false;
+  }
+
+  // 2. Red Pickup Truck (Frame 2 at t = 4.12):
+  // At t = 4.12: center at (X = 3.95, Z = -3.35), moving along +Z (left-to-right across screen)
+  if (t >= 2.6 && t <= 5.8) {
+    redPickup.visible = true;
+    const dt2 = t - 4.12;
+    const speed2 = 10.8;
+    redPickup.position.set(
+      3.95 - 0.08 * speed2 * dt2,
+      0.0,
+      -3.35 + speed2 * dt2
+    );
+    redPickup.rotation.y = -Math.PI / 2 - 0.08;
+  } else {
+    redPickup.visible = false;
+  }
+
+  // 3. Distant Car Waiting on the Right (Frame 3 at t = 7.50)
+  if (t >= 5.5 && t <= 9.8) {
+    distantCarGroup.visible = true;
+    distantCarGroup.position.set(11.5, 0.0, 15.2);
+    distantCarGroup.rotation.y = 0.15;
+  } else {
+    distantCarGroup.visible = false;
+  }
+
+  // 4. Traffic Signal Light State (RED for t < 6.2s, GREEN for t >= 6.2s)
+  const isGreen = (t >= 6.2);
+  centerSigLeft.material = isGreen ? centerSigMatGreen : centerSigMatRed;
+  centerSigRight.material = isGreen ? centerSigMatGreen : centerSigMatRed;
+
+  // Pedestrian WALK signal on far corner pole (turns white WALK in Frame 5)
+  pedWalkBulb.visible = (t >= 12.0);
+}
+
+// ============================================================================
+// Contract API: window.seek(t), window.duration, window.__ready
+// ============================================================================
+window.duration = trajData.frames[trajData.frames.length - 1].t;
+
+window.seek = function(t) {
+  updateSceneAtTime(t);
+  composer.render();
+  if (!isCapture) {
+    scrubber.value = t;
+    timeLabel.textContent = t.toFixed(2) + 's';
+  }
+};
+
+// ============================================================================
+// Interactive UI & Playback Loop
+// ============================================================================
+const playBtn = document.getElementById('playBtn');
+const scrubber = document.getElementById('scrubber');
+const timeLabel = document.getElementById('timeLabel');
+const camBtn = document.getElementById('camBtn');
+const pitchSlider = document.getElementById('pitchSlider');
+
+let isPlaying = !isCapture;
+let lastFrameWallTime = performance.now();
+
+camBtn.textContent = `Cam: ${camMode === 'chase' ? 'Chase' : 'Robot'}`;
+
+playBtn.addEventListener('click', () => {
+  isPlaying = !isPlaying;
+  playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+  lastFrameWallTime = performance.now();
+});
+
+scrubber.addEventListener('input', (e) => {
+  isPlaying = false;
+  playBtn.textContent = 'Play';
+  window.seek(parseFloat(e.target.value));
+});
+
+camBtn.addEventListener('click', () => {
+  camMode = (camMode === 'robot') ? 'chase' : 'robot';
+  camBtn.textContent = `Cam: ${camMode === 'chase' ? 'Chase' : 'Robot'}`;
+  window.seek(currentTime);
+});
+
+pitchSlider.addEventListener('input', (e) => {
+  pitchDeg = parseFloat(e.target.value);
+  window.seek(currentTime);
+});
+
+window.addEventListener('resize', () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  composer.setSize(w, h);
+  chaseCamera.aspect = w / h;
+  chaseCamera.updateProjectionMatrix();
+  window.seek(currentTime);
+});
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  if (!isPlaying) return;
+  const dt = Math.min((now - lastFrameWallTime) / 1000, 0.1);
+  lastFrameWallTime = now;
+  let nextT = currentTime + dt;
+  if (nextT > window.duration) nextT = 0.0;
+  window.seek(nextT);
+}
+
+// ============================================================================
+// Initialization (Fetch Trajectory if URL param provided, then render Frame 0)
+// ============================================================================
+async function init() {
+  if (trajUrl) {
+    try {
+      const resp = await fetch(trajUrl);
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json && Array.isArray(json.frames) && json.frames.length > 0) {
+          trajData = json;
+          if (json.camera) {
+            if (json.camera.vfov_deg) robotCamera.fov = json.camera.vfov_deg;
+            if (json.camera.aspect) robotCamera.aspect = json.camera.aspect;
+            robotCamera.updateProjectionMatrix();
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Using fallback trajectory:', err);
+    }
+  }
+
+  window.duration = trajData.frames[trajData.frames.length - 1].t;
+  scrubber.max = window.duration;
+
+  // Render initial frame synchronously and mark ready
+  window.seek(0.0);
+  window.__ready = true;
+
+  if (!isCapture) {
+    lastFrameWallTime = performance.now();
+    requestAnimationFrame(animate);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

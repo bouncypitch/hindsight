@@ -1,0 +1,133 @@
+{
+ "title": "Hindsight: robots that learn from their own failures",
+ "scenes": [
+  {
+   "id": "open",
+   "kicker": "Built with Gemini 4 Argon",
+   "headline": "Federated Robot Learning: Enabled by Argon",
+   "media": [
+    "/demo_assets/coco_09294dbb/real_twin_omni.mp4"
+   ],
+   "say": "Robots drive millions of miles, indoors and out. But the moments that matter, when one hits something, falls, or tips over, are rare, buried in hours of footage, and almost never labeled. Hindsight turns those moments into training data, with Gemini 4 Argon.",
+   "sub": "Robots that learn from their own failures.",
+   "fit": true,
+   "captions": [
+    "Real robot camera",
+    "Argon's 3D twin",
+    "Twin + Gemini Omni"
+   ]
+  },
+  {
+   "id": "find",
+   "kicker": "01 \u00b7 Find",
+   "headline": "Argon finds real failures in fleet video.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/01_real_failure.mp4",
+    "/data/mini4k_clips/138572_tip_over_216s.mp4",
+    "/data/mini4k_clips/137907_collision_104s.mp4",
+    "/data/mini4k_clips/137941_tip_over_467s.mp4"
+   ],
+   "stat": "130 candidates \u00b7 44 confirmed \u00b7 15 of 15 verified by a human",
+   "say": "We scan raw rides from the open FrodoBots dataset. Physics triggers flag a hundred and thirty candidates. Argon watches every one, and confirms only what it can actually see happen. A robot clipping a barstool. Bumping into a dog. Hitting another robot on a crowded sidewalk. Flipping off a garden edge. Every confirmed failure we checked by hand was right."
+  },
+  {
+   "id": "understand",
+   "kicker": "02 \u00b7 Understand",
+   "headline": "It explains what went wrong, and what it can't know.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/01_real_failure.mp4"
+   ],
+   "quote": "The robot's right wheel struck and climbed the leg of a wooden barstool, causing it to violently roll ninety degrees onto its side.",
+   "say": "Argon reads the video and the robot's motion sensors together. It timestamps the failure, explains the cause, estimates the scene for a physics simulator, and lists what it couldn't determine, instead of guessing."
+  },
+  {
+   "id": "rebuild",
+   "kicker": "03 \u00b7 Rebuild",
+   "headline": "A digital twin that fails the same way.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/03_twin_old_policy.mp4",
+    "/demo_assets/141102_tip_over_443s/04_variants_grid.mp4"
+   ],
+   "say": "Argon turns its diagnosis into a physics twin, and proves it. The twin only counts if the robot's original behavior reproduces the failure. If it doesn't, Argon compares simulation to reality and revises. Then it plans forty realistic variants of that one failure."
+  },
+  {
+   "id": "real",
+   "kicker": "04 \u00b7 Look real",
+   "headline": "Twins you can't tell from the real thing.",
+   "media": [
+    "/demo_assets/coco_09294dbb/real_twin_omni.mp4"
+   ],
+   "captions": [
+    "Real Coco camera",
+    "Argon's 3D twin",
+    "Twin + Gemini Omni"
+   ],
+   "say": "From just six frames of a real Coco robot clip, Argon rebuilds the street in 3D, and the robot drives its exact recorded path. Gemini Omni then restyles the render to look like the real camera. The physics comes from the twin. Omni only adds realism.",
+   "fit": true
+  },
+  {
+   "id": "learn",
+   "kicker": "05 \u00b7 Learn, safely",
+   "headline": "RL learns. Argon catches it cheating, then approves the real fix.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/photoreal/twin_old_chase_omni.mp4",
+    "/demo_assets/141102_tip_over_443s/photoreal/twin_new_chase_omni.mp4"
+   ],
+   "quote": "The robot smoothly steers left to give the obstacle a wide berth, passing with thirty centimeters of clearance, and realigns without oscillation, stalling, or collision.",
+   "say": "Argon writes the reward from good and bad rides, and reinforcement learning retrains the robot on the twins. Then Argon watches. At first it refuses: the robot had learned to freeze, then creep into the stool leg. Argon rewrites the reward. The final policy steers around the leg with twenty-five centimeters to spare, in all forty variants. And Argon approves it.",
+   "captions_small": true
+  },
+  {
+   "id": "agent",
+   "kicker": "06 \u00b7 Autonomous",
+   "headline": "The whole loop runs in Google's sandbox.",
+   "media": [
+    "/demo_assets/141102_tip_over_443s/04_variants_grid.mp4"
+   ],
+   "say": "With Antigravity managed agents, Argon runs that entire loop on its own, in a hosted sandbox: install the simulator, train, hunt for reward hacking, fix the reward, and verify again."
+  },
+  {
+   "id": "fleet",
+   "kicker": "07 \u00b7 Share",
+   "headline": "Federated robot learning.",
+   "big": "770,000\u00d7",
+   "bigcap": "less data: only what changes the policy is uploaded",
+   "say": "Then the fleet learns together. Today robots upload everything, because no one knows which moments matter. Hindsight uploads only the failures, fifty times less, or just the policy update, hundreds of thousands of times less. Argon reviews every update against every city, and blocks the ones that trade safety for speed."
+  },
+  {
+   "id": "whatif",
+   "kicker": "08 \u00b7 What if",
+   "headline": "One real clip. Many dangerous futures.",
+   "media": [
+    "/demo_assets/coco_09294dbb/whatif/whatif_grid.mp4"
+   ],
+   "optional": true,
+   "say": "And from a single normal ride, the twin asks what if. What if the truck runs the light? What if someone steps out? What if the ramp becomes a sudden drop? The robot learns from failures that haven't happened yet."
+  },
+  {
+   "id": "agents",
+   "kicker": "The agents",
+   "headline": "A team of agents, led by Argon.",
+   "list": [
+    "Argon \u00b7 auditor, diagnostician, twin builder, reward engineer, safety verifier, fleet gatekeeper",
+    "Antigravity managed agent \u00b7 autonomous training lab",
+    "Gemini Omni \u00b7 photoreal twins",
+    "Flash-Lite \u00b7 fleet screening",
+    "MuJoCo + RL \u00b7 the gym"
+   ],
+   "say": "Argon leads a team of agents. It audits, diagnoses, builds worlds, writes rewards, and has the final say on safety."
+  },
+  {
+   "id": "why",
+   "kicker": "Why Argon",
+   "headline": "What would not be possible without Argon.",
+   "list": [
+    "Video and sensor fusion with honest uncertainty",
+    "Twins that correct themselves against reality",
+    "Rewards written from observation, defended against hacking",
+    "A skeptical reviewer for every policy and every fleet update"
+   ],
+   "say": "For a robotics team, every field failure becomes a regression test and a verified fix. None of this works with a model that can only see, or only code. It takes one model that watches, reasons about physics, writes the software, and knows when not to ship. That's Argon. This is Hindsight."
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+{
+ "failed": true,
+ "t_sec": 8.25,
+ "failure_type": "collision",
+ "cause": "While driving across a flat concrete plaza and curving right toward a row of parked scooters and trash bins, the robot failed to detect a stationary small rover parked in front of a recycling bin and collided with it at t=8.25 s at ~0.7 m/s. The provided IMU log disagrees strongly with the video (showing extreme vertical acceleration spikes such as az_g = -1.901 g while the robot sits motionless on flat pavement), so the video is trusted over the corrupted or mismatched IMU log.",
+ "evidence": [
+  "00:00.000-00:01.500: Robot is stationary on flat dry concrete, whereas the IMU log reports severe vertical anomalies (az_g = -0.014 g at t=0.72 s, 0.065 g at t=0.92 s, and -1.901 g at t=1.58 s), proving the IMU log is corrupted or mismatched.",
+  "00:01.625-00:03.000: Robot rotates left in place, pauses until 00:03.625, then drives forward.",
+  "00:05.750-00:06.000: A stationary small 4-wheel robot (~0.4 m size, radius ~0.2 m) becomes visible ~1.8 m ahead, parked directly in front of a brown recycling bin.",
+  "00:06.000-00:08.250: Robot steers rightward at ~0.7-0.8 m/s directly toward the parked robot without stopping.",
+  "00:08.250-00:08.375: Front-right of the ego robot collides with the stationary robot, pushing it slightly before coming to a halt.",
+  "00:09.500-00:11.875: Robot reverses away from the obstacle and turns left."
+ ],
+ "scene": {
+  "scenario_kind": "obstacle",
+  "obstacle_distance_m": 1.8,
+  "obstacle_lateral_m": -0.15,
+  "obstacle_radius_m": 0.2,
+  "mover_speed_mps": 0.0,
+  "curb_height_m": 0.0,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "speed_mps": 0.75,
+  "t_edge_sec": null,
+  "surface": "dry concrete",
+  "other_factors": [
+   "Cluttered environment with parked scooters, bicycles, and recycling bins",
+   "Obstacle is another low-profile small wheeled robot parked against a bin",
+   "IMU log disagrees with video (spurious -1.9 g vertical spikes while stationary on flat ground); video is trusted"
+  ]
+ },
+ "confidence": 0.85,
+ "unknowns": [
+  "Exact impact acceleration and robot speed from sensors because the IMU log is corrupted or mismatched with the video clip"
+ ]
+}

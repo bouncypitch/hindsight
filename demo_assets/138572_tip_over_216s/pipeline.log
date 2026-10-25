@@ -1,0 +1,55 @@
+[13:59:02] Argon: diagnosing the real clip (video + sensors)
+[14:00:18]   rollover at t=8.0s, confidence 0.85: After driving past a large dog under a desk and reversing back out, the robot drove forward into the dog's hind legs (around 00:07.375 in the video / 6.86 s in the IMU log) and was tipped backward onto its rear (~85° pitch-up, ay_g ≈ 0.95 g, az_g ≈ 0.1 g at t = 7.16–9.56 s) before rolling onto its right side (ax_g ≈ 1.0 g, az_g ≈ -0.1 g from t = 9.96 s onward). Video timestamps lag the IMU log by ~1.3–1.4 s with frozen video frames (e.g., 00:07.500–00:08.000), so the IMU is trusted for timing and kinematics while the video is trusted for identifying the dog collision.
+[14:00:18] Argon: building a twin that reproduces the failure
+[14:00:22] twin_v1: MISMATCH  twin outcome 'none' but the clip shows 'rollover'  (h=0.20 angle=0 v=0.45)
+[14:07:53]   Argon: In twin_v1, modeling the scene as 'pedestrian' with obs_x = 0.8 m, ped_start_y = -2.5 m, ped_speed = 0.3 m/s, and speed_mps = 0.45 m/s caused the robot to pass x = 0.8 m at t = 1.78 s while the pedestrian cylinder was still at y = -1.97 m (reaching a minimum clearance of 1.079 m at t = 3.80 s and never colliding, resulting in max_tilt_deg = 0.22°). Furthermore, in the rigid-body simulator a vertical pedestrian cylinder on flat ground contacts the robot's low wheel/chassis base and cannot induce the ~85° pitch-up and lateral rollover observed when the real robot drove into and rode up the dog's hind legs. Representing the dog's hindquarters/legs as an oblique 0.26 m curb drop/step ('drop', curb_height_m = 0.26 m, approach_angle_deg = 38°, speed_mps = 1.05 m/s, t_edge_sec = 1.5 s on high-friction carpet) causes the leading wheel to drop 0.26 m across the 0.34 m wheel track before the trailing wheels clear the edge, exceeding the ~38° static rollover threshold and reproducing the rollover failure.
+[14:07:55] twin_v2: MISMATCH  twin outcome 'nose_over' but the clip shows 'rollover'  (h=0.26 angle=38 v=1.05)
+[14:13:28]   Argon: The simulated twin (`twin_v2`) models the wrong scenario entirely: an outdoor curb drop (`kind = "drop"`, `curb_height = 0.26 m`, `approach_angle_deg = 38.0°`, `observed_speed = 1.05 m/s`), whereas the real clip occurs indoors on flat plush carpet (`curb_height_m = 0.0 m`, `slope_deg = 0.0°`) involving a collision with a large white dog (`scenario_kind = "pedestrian"`).
+
+1. Scenario & Geometry Mismatch: In `twin_v2`, the robot drives across a flat platform and drops off a 0.26 m ledge at t = 2.25 s. Because it approaches the step at 38.0° and a high speed of 1.03 m/s, the front-right wheel drops at 00:02.250 and the front-left wheel follows ~0.15 s later (00:02.375–00:02.500), causing the chassis to pitch nose-down off the ledge (`nose_over`, reaching 81.7° tilt at t = 3.15 s) before rolling onto its right side. In the real clip, there is no curb: the robot starts on indoor carpet facing a standing dog ~0.8 m ahead, drives forward (t = 0.52–2.40 s, peak ~0.8 m/s) passing just to the right of the dog's legs to stop under a desk, reverses back out (t = 3.60–4.60 s) to ~0.25 m directly behind the dog's hind legs, and then accelerates forward again at t = 6.56 s (ay_g = 0.432 g, reaching ~0.45 m/s at 0° approach angle) straight into the dog's hind legs at t = 6.86–7.06 s (00:07.375–00:08.250 in video, which lags the IMU by ~1.3–1.4 s).
+
+2. Pitch/Roll Kinematics Mismatch: Whereas the sim twin pitches forward (`nose_over`) off a curb at t = 2.25–3.15 s, the real robot is pushed/lifted backward by the dog collision at t = 7.06–7.16 s (ay_g spikes to +1.426 g), pitching backward ~85° onto its rear bumper (ay_g ≈ +0.90 to +0.98 g, az_g ≈ 0.0 to 0.25 g from t = 7.16 to 9.56 s while the front camera points straight up at the ceiling fan and the underside of the dog for 2.6 s). Only at t = 9.66–9.96 s (00:11.125–00:11.500 in video) does the robot topple laterally from its rear onto its right side (`rollover`, settling at ax_g ≈ +1.0 g, ay_g ≈ 0.0 g, az_g ≈ -0.1 g from t = 9.96 s onward).
+
+3. Simulator Note: To represent the true event, the scene must be a flat indoor `pedestrian` (animal) interaction at ~0.45 m/s head-on (`0°`) into the dog's hindquarters (radius ~0.15 m). (If approximating a pure right-side `rollover` without `nose_over` using a curb-drop proxy in a simulator lacking upward/backward animal forces, the curb drop would require a much shallower oblique angle of ~55°–65°, slower speed of ~0.45 m/s, and lower step height of ~0.18 m so the right-side wheels drop while the left-side wheels stay supported.)
+[14:13:29] twin_v3: MISMATCH  twin outcome 'none' but the clip shows 'rollover'  (h=0.20 angle=0 v=0.45)
+[14:13:30] Argon: planning 40 variants
+[14:13:52] RL round 1: CMA-ES on 40 variants with reward_v1.py
+[14:13:58] gen  0  reward   35.31  success 52%  edge_speed 0.77  edge_heading 0°  impact 31
+[14:14:03] gen  1  reward   45.06  success 68%  edge_speed 1.66  edge_heading 0°  impact 31
+[14:14:06] gen  2  reward   40.46  success 55%  edge_speed 1.14  edge_heading 0°  impact 31
+[14:14:09] gen  3  reward   50.00  success 68%  edge_speed 1.55  edge_heading 0°  impact 31
+[14:14:13] gen  4  reward   50.43  success 65%  edge_speed 1.42  edge_heading 0°  impact 31
+[14:14:16] gen  5  reward   45.69  success 60%  edge_speed 1.25  edge_heading 0°  impact 31
+[14:14:19] gen  6  reward   48.41  success 62%  edge_speed 1.34  edge_heading 0°  impact 31
+[14:14:22] gen  7  reward   48.96  success 68%  edge_speed 1.57  edge_heading 0°  impact 31
+[14:14:25] gen  8  reward   47.61  success 62%  edge_speed 1.37  edge_heading 0°  impact 31
+[14:14:27] gen  9  reward   53.10  success 68%  edge_speed 1.46  edge_heading 0°  impact 31
+[14:14:28] gen 10  reward   53.24  success 68%  edge_speed 1.46  edge_heading 0°  impact 31
+[14:14:31] gen 11  reward   51.44  success 68%  edge_speed 1.51  edge_heading 0°  impact 31
+[14:14:34] gen 12  reward   49.90  success 68%  edge_speed 1.55  edge_heading 0°  impact 31
+[14:14:36] gen 13  reward   52.46  success 68%  edge_speed 1.48  edge_heading 0°  impact 31
+[14:14:37] gen 14  reward   51.66  success 68%  edge_speed 1.50  edge_heading 0°  impact 31
+[14:14:38]   success 10% -> 68%
+[14:14:39] Argon: verifying the new policy against the real failure
+[14:16:33]   fixes=False hacking=True ship=False The policy learned to drag-race straight ahead at maximum speed (mean_edge_speed jumped from 0.45 m/s to 1.46 m/s with mean_abs_edge_heading of 0.002 deg) to beat the crossing obstacle to the goal line rather than steering away or yielding. It exploited three flaws in the reward: (1) per-tick lateral and heading penalties (y_pos > 0.25 and hdg_err > 5.0) punished evasive steering; (2) the edge_speed penalty at 1.46 m/s (~18 pts) was dwarfed by the +100 success bonus, +35 progress shaping, +14 fast-finish time_bonus (which rewarded finishing in <=2.5s), and ~34 pts of un-gated smoothness/alignment bonuses; and (3) collided episodes still received full forward-progress credit and capped impact penalties, allowing a policy with a 32.5% collision rate and 31.08 mean peak impact to achieve a +53.24 average reward.
+[14:16:33]   Argon rewrote the reward -> reward_round2.py; retraining
+[14:16:33] RL round 2: CMA-ES on 40 variants with reward_round2.py
+[14:16:37] gen  0  reward -115.07  success 15%  edge_speed 0.21  edge_heading 0°  impact 33
+[14:16:40] gen  1  reward -124.76  success 28%  edge_speed 0.40  edge_heading 0°  impact 33
+[14:16:43] gen  2  reward -104.99  success 38%  edge_speed 0.63  edge_heading 0°  impact 31
+[14:16:45] gen  3  reward -121.12  success 22%  edge_speed 0.29  edge_heading 0°  impact 33
+[14:16:49] gen  4  reward -112.42  success 15%  edge_speed 0.23  edge_heading 0°  impact 33
+[14:16:52] gen  5  reward -103.68  success 30%  edge_speed 0.45  edge_heading 0°  impact 32
+[14:16:55] gen  6  reward -113.15  success 40%  edge_speed 0.57  edge_heading 0°  impact 32
+[14:16:58] gen  7  reward -101.61  success 30%  edge_speed 0.44  edge_heading 0°  impact 31
+[14:17:01] gen  8  reward -107.80  success 28%  edge_speed 0.42  edge_heading 0°  impact 31
+[14:17:04] gen  9  reward  -95.33  success 32%  edge_speed 0.51  edge_heading 0°  impact 31
+[14:17:08] gen 10  reward  -93.19  success 35%  edge_speed 0.54  edge_heading 0°  impact 31
+[14:17:13] gen 11  reward -108.64  success 38%  edge_speed 0.55  edge_heading 0°  impact 32
+[14:17:18] gen 12  reward -112.52  success 35%  edge_speed 0.54  edge_heading 1°  impact 31
+[14:17:23] gen 13  reward -101.41  success 42%  edge_speed 0.67  edge_heading 0°  impact 31
+[14:17:27] gen 14  reward -103.43  success 30%  edge_speed 0.45  edge_heading 0°  impact 31
+[14:17:29]   success 10% -> 35%
+[14:17:30] Argon: verifying the new policy against the real failure
+[14:19:19]   fixes=False hacking=True ship=False The policy learned a passive freezing/stalling hack instead of active obstacle avoidance. In the reward function, any speed above 0.45 m/s near an obstacle multiplies the clearance penalty (both episode-level `speed_mult` and per-tick `obs_d < 1.0`), and initiating evasive motion triggers jerk and command-rate penalties (`jerk > 0.35`, `d_cv > 0.8`). Meanwhile, stalling (-40) or timing out (-30) is penalized far less than colliding (-180 plus impact/clearance penalties). As a result, the robot remains completely motionless in the twin replay (waiting to be struck at 00:03.250) and stalls in 17.5% of variants, cutting average negative reward from -187.7 to -93.2 while only succeeding 35% of the time and still colliding in 22.5% of runs.
+[14:19:19] done

@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" font-family="-apple-system, BlinkMacSystemFont, Inter, sans-serif" role="img" aria-label="CurbSense architecture">
+  <style>
+    .box { fill: var(--card, #0d0d0f); stroke: var(--line, #2c2c30); stroke-width: 1.5; }
+    .argon { fill: rgba(41,151,255,.14); stroke: #2997ff; stroke-width: 1.8; }
+    .tool { fill: rgba(255,255,255,.04); stroke: var(--line, #2c2c30); stroke-width: 1.5; stroke-dasharray: 0; }
+    .t { fill: var(--ink, #f5f5f7); font-size: 16px; font-weight: 600; }
+    .s { fill: var(--mute, #86868b); font-size: 12.5px; }
+    .lane { fill: var(--mute, #86868b); font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+    .ar { stroke: var(--mute, #86868b); stroke-width: 1.8; fill: none; marker-end: url(#a); }
+    .loop { stroke: #ff9f0a; stroke-width: 1.8; fill: none; stroke-dasharray: 5 4; marker-end: url(#ao); }
+    .lt { fill: #ff9f0a; font-size: 12px; font-weight: 600; }
+    .sandbox { fill: none; stroke: #30d158; stroke-width: 1.6; stroke-dasharray: 7 5; }
+    .sbt { fill: #30d158; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#86868b"/></marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ff9f0a"/></marker>
+  </defs>
+
+  <!-- row 1: find -> understand -> rebuild -->
+  <text class="lane" x="20" y="30">FROM REAL FAILURES</text>
+  <rect class="box" x="20" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="36" y="80">Fleet video</text><text class="s" x="36" y="102">front camera + IMU</text><text class="s" x="36" y="120">FrodoBots · Coco</text>
+
+  <rect class="tool" x="230" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="246" y="80">Physics triggers</text><text class="s" x="246" y="102">tilt · free-fall · impact</text><text class="s" x="246" y="120">+ Flash-Lite screen</text>
+
+  <rect class="argon" x="440" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="456" y="80">Argon: confirm</text><text class="s" x="456" y="102">only what it can see</text><text class="s" x="456" y="120">rejects glitches</text>
+
+  <rect class="argon" x="650" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="666" y="80">Argon: diagnose</text><text class="s" x="666" y="102">cause · time · scene</text><text class="s" x="666" y="120">+ its unknowns</text>
+
+  <rect class="argon" x="860" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="876" y="80">Argon: build twin</text><text class="s" x="876" y="102">MuJoCo physics</text><text class="s" x="876" y="120">must reproduce failure</text>
+
+  <path class="ar" d="M190 91 H226"/><path class="ar" d="M400 91 H436"/><path class="ar" d="M610 91 H646"/><path class="ar" d="M820 91 H856"/>
+  <path class="loop" d="M985 134 C985 168, 905 168, 905 138"/><text class="lt" x="890" y="182">revise until it reproduces</text>
+
+  <!-- row 2: learn + verify inside sandbox -->
+  <text class="lane" x="20" y="232">LEARN SAFELY</text>
+  <rect class="sandbox" x="430" y="210" width="610" height="150" rx="18"/>
+  <text class="sbt" x="446" y="230">ANTIGRAVITY MANAGED AGENT · SANDBOX</text>
+
+  <rect class="argon" x="20" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="36" y="284">Argon: variants</text><text class="s" x="36" y="306">40 realistic copies</text><text class="s" x="36" y="324">of the failure</text>
+
+  <rect class="argon" x="230" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="246" y="284">Argon: reward</text><text class="s" x="246" y="306">written from good &amp;</text><text class="s" x="246" y="324">bad real rides</text>
+
+  <rect class="tool" x="450" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="466" y="284">RL (CMA-ES)</text><text class="s" x="466" y="306">retrains the policy</text><text class="s" x="466" y="324">on the twins</text>
+
+  <rect class="argon" x="660" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="676" y="284">Argon: verify</text><text class="s" x="676" y="306">watches the result,</text><text class="s" x="676" y="324">hunts reward hacking</text>
+
+  <rect class="box" x="870" y="252" width="150" height="86" rx="14"/>
+  <text class="t" x="886" y="284">Ship / block</text><text class="s" x="886" y="306">human approves</text><text class="s" x="886" y="324">the deploy</text>
+
+  <path class="ar" d="M945 134 C945 200, 105 190, 105 248"/>
+  <path class="ar" d="M190 295 H226"/><path class="ar" d="M400 295 H446"/><path class="ar" d="M620 295 H656"/><path class="ar" d="M830 295 H866"/>
+  <path class="loop" d="M745 338 C745 380, 315 380, 315 342"/><text class="lt" x="440" y="384">hack found → Argon rewrites the reward</text>
+
+  <!-- row 3: fleet + photoreal -->
+  <text class="lane" x="20" y="430">SHARE &amp; SHOW</text>
+  <rect class="box" x="20" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="36" y="484">Each robot</text><text class="s" x="36" y="506">learns locally, uploads</text><text class="s" x="36" y="524">~100 bytes, not video</text>
+
+  <rect class="argon" x="260" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="276" y="484">Argon: fleet gate</text><text class="s" x="276" y="506">accept / reject each</text><text class="s" x="276" y="524">update, every city</text>
+
+  <rect class="box" x="500" y="452" width="170" height="86" rx="14"/>
+  <text class="t" x="516" y="484">Master policy</text><text class="s" x="516" y="506">FedAvg of accepted</text><text class="s" x="516" y="524">updates → fleet</text>
+
+  <path class="ar" d="M945 338 C945 420, 120 410, 120 448"/>
+  <path class="ar" d="M220 495 H256"/><path class="ar" d="M460 495 H496"/>
+
+  <rect class="argon" x="760" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="776" y="484">Argon: 3D world</text><text class="s" x="776" y="506">twin scene from a few</text><text class="s" x="776" y="524">real frames · what-ifs</text>
+  <rect class="tool" x="1000" y="452" width="180" height="86" rx="14"/>
+  <text class="t" x="1016" y="484">Gemini Omni</text><text class="s" x="1016" y="506">photoreal look,</text><text class="s" x="1016" y="524">twin keeps physics</text>
+  <path class="ar" d="M960 495 H996"/>
+  <path class="ar" d="M1030 134 C1110 200, 1100 400, 900 448"/>
+
+  <!-- legend -->
+  <rect class="argon" x="1060" y="20" width="16" height="12" rx="3"/><text class="s" x="1082" y="31">Argon</text>
+  <rect class="tool" x="1060" y="40" width="16" height="12" rx="3"/><text class="s" x="1082" y="51">tools / other models</text>
+</svg>

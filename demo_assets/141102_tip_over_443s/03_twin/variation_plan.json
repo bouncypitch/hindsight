@@ -1,0 +1,35 @@
+{
+ "reasoning": "The failure is a single-wheel collision and rollover caused by the robot's right wheel (track half-width ~0.17 m) striking a thin barstool leg/rung on its right side (obs_y = -0.15 m). Because the initial distance (obs_x = 1.4 m) and forward speed (0.65 m/s) were estimated visually without wheel odometry, we randomize both to cover measurement uncertainty and teach the policy to stop or steer away across a range of approach speeds and reaction distances. We also vary the lateral position (obs_y) around the right wheel track and across the full robot width so the policy learns to clear narrow obstacles rather than clipping them with its wheels, and vary obstacle radius (obs_r) to represent different furniture leg/rung thicknesses. Finally, we randomize floor friction to cover typical indoor hardwood/tile variations.",
+ "ranges": [
+  {
+   "param": "obs_x",
+   "minus": 0.4,
+   "plus": 0.6,
+   "why": "Accounts for visual uncertainty in the initial distance to the barstool (1.0 m to 2.0 m) and varies the available reaction/braking distance."
+  },
+  {
+   "param": "obs_y",
+   "minus": 0.08,
+   "plus": 0.35,
+   "why": "Centers on the right wheel path (-0.23 m to +0.20 m) where a single-wheel strike causes a rollover, while also testing centerline and left-wheel clearances."
+  },
+  {
+   "param": "obs_r",
+   "minus": 0.0,
+   "plus": 0.09,
+   "why": "Base value is 0.03 m (clamp to lower bound 0.05 m up to 0.12 m) to cover thin furniture legs, footrest rungs, and wider post bases."
+  },
+  {
+   "param": "observed_speed",
+   "minus": 0.25,
+   "plus": 0.35,
+   "why": "Covers uncertainty in the visually estimated ~0.65 m/s speed (0.40 to 1.00 m/s) and ensures the policy avoids climbing obstacles across typical indoor driving speeds."
+  },
+  {
+   "param": "friction",
+   "minus": 0.3,
+   "plus": 0.2,
+   "why": "Spans realistic indoor hardwood and tile surface friction (0.6 to 1.1), which directly affects both braking distance and whether the wheel grips and climbs the obstacle."
+  }
+ ]
+}

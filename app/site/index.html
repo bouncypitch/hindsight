@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Federated Robot Learning: Enabled by Argon</title>
+<meta name="description" content="Hindsight: robots that learn from their own failures, with Gemini 4 Argon.">
+<style>
+  :root { --bg:#000; --ink:#f5f5f7; --mute:#86868b; --line:#1d1d1f; --card:#0d0d0f; --accent:#2997ff; --bad:#ff453a; --ok:#30d158; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#fbfbfd; --ink:#1d1d1f; --mute:#6e6e73; --line:#e5e5ea; --card:#fff; } }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
+  .hero { min-height:88vh; display:flex; flex-direction:column; justify-content:center; padding:72px 0 40px; }
+  .eyebrow { color:var(--accent); font-weight:600; letter-spacing:.02em; font-size:15px; }
+  h1 { font-size:clamp(44px, 8vw, 88px); line-height:1.02; letter-spacing:-.03em; margin:10px 0 18px; font-weight:700; }
+  .lede { font-size:clamp(19px, 2.4vw, 26px); color:var(--mute); max-width:760px; line-height:1.35; }
+  .lede b { color:var(--ink); font-weight:600; }
+  .hero video { margin-top:36px; }
+  section.step { padding:84px 0 24px; border-top:1px solid var(--line); }
+  .num { color:var(--mute); font-size:14px; font-variant-numeric:tabular-nums; letter-spacing:.08em; text-transform:uppercase; }
+  h2 { font-size:clamp(30px, 4.6vw, 52px); letter-spacing:-.02em; line-height:1.08; margin:8px 0 14px; font-weight:700; }
+  p.body { color:var(--mute); font-size:19px; max-width:720px; margin:0 0 26px; }
+  p.body b { color:var(--ink); font-weight:600; }
+  video { width:100%; border-radius:18px; background:#000; display:block; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+  .grid figure { margin:0; }
+  figcaption { color:var(--mute); font-size:14px; margin-top:8px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin:8px 0 28px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  .stat .v { font-size:38px; font-weight:700; letter-spacing:-.02em; }
+  .stat .k { color:var(--mute); font-size:14px; }
+  .quote { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 22px; font-size:18px; margin:0 0 20px; }
+  .quote .who { color:var(--accent); font-size:13px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; margin-bottom:6px; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; margin-right:6px; }
+  .tag.bad { background:var(--bad); color:#fff; } .tag.ok { background:var(--ok); color:#000; }
+  .three { display:grid; grid-template-columns:1fr 1fr 1fr; color:var(--mute); font-size:14px; text-align:center; margin-top:8px; }
+  .only li { margin:10px 0; color:var(--mute); font-size:19px; } .only li b { color:var(--ink); }
+  .agents { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+  .agent { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; }
+  .agent .model { font-family: ui-monospace, Menlo, monospace; font-size:12px; color:var(--accent); }
+  .agent h3 { margin:6px 0 8px; font-size:20px; letter-spacing:-.01em; }
+  .agent p { margin:0; color:var(--mute); font-size:15px; }
+  .agent.lead { grid-column: 1 / -1; border-color: var(--accent); }
+  .agent.lead ul { margin:10px 0 0; padding-left:18px; color:var(--mute); font-size:15px; columns:2; column-gap:28px; }
+  @media (max-width:640px) { .agent.lead ul { columns:1; } }
+  .savings { background:linear-gradient(135deg, rgba(41,151,255,.16), rgba(48,209,88,.10)); border:1px solid var(--line); border-radius:22px; padding:28px; margin:6px 0 24px; }
+  .savings .hero-num { font-size:clamp(48px, 9vw, 96px); font-weight:800; letter-spacing:-.04em; line-height:1; }
+  .savings .cap { color:var(--mute); font-size:18px; margin-top:8px; }
+  .savings .vs { display:grid; grid-template-columns:1fr auto 1fr; gap:16px; align-items:end; margin-top:24px; }
+  .savings .side .v { font-size:clamp(28px, 4.5vw, 44px); font-weight:700; letter-spacing:-.02em; }
+  .savings .side .k { color:var(--mute); font-size:14px; }
+  .savings .x { color:var(--mute); font-size:22px; padding-bottom:10px; }
+  .tiers { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:14px; align-items:center; margin-top:26px; }
+  .tier { background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .tier.hl { border-color:var(--ok); }
+  .tier .v { font-size:clamp(26px, 3.6vw, 40px); font-weight:700; letter-spacing:-.02em; }
+  .tier .k { color:var(--mute); font-size:14px; }
+  .tiers .arrow { color:var(--mute); font-size:26px; }
+  @media (max-width:760px) { .tiers { grid-template-columns:1fr; } .tiers .arrow { transform:rotate(90deg); justify-self:center; } }
+  .savings .note { color:var(--mute); font-size:13px; margin-top:16px; }
+  .arch svg { width:100%; height:auto; display:block; }
+  .arch { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:18px; }
+  .teams { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+  .pain { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px 20px; }
+  .pain .q { font-size:17px; font-weight:600; margin-bottom:8px; }
+  .pain .a { color:var(--mute); font-size:15px; }
+  .pain .a b { color:var(--ink); }
+  .inbox { background:var(--card); border:1px solid var(--accent); border-radius:18px; padding:20px 22px; margin:18px 0; font-size:18px; }
+  .inbox .who { color:var(--accent); font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; }
+  footer { color:var(--mute); font-size:14px; padding:60px 0 80px; border-top:1px solid var(--line); }
+  [data-needs].missing { display:none; }
+  @media (max-width:640px) { .three { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Built with Gemini 4 Argon</div>
+  <h1>Federated Robot Learning:<br>Enabled by Argon</h1>
+  <p class="lede"><b>Robots that learn from their own failures.</b> Hindsight watches real footage from small robots, <b>indoors and outdoors</b>: kitchens and hallways, sidewalks, plazas and parking lots. It finds the moments a robot went wrong, rebuilds each one as a <b>digital twin</b>, and retrains the robot until <b>Argon</b> agrees it is safe to share with the whole fleet.</p>
+  <video data-needs src="../../demo_assets/coco_09294dbb/real_twin_omni.mp4" autoplay muted loop playsinline></video>
+  <div class="three"><span>Real Coco robot camera</span><span>Argon's digital twin</span><span>Twin + Gemini Omni</span></div>
+</header>
+
+<section class="step" id="architecture">
+  <div class="num">How it works</div>
+  <h2>One loop, from a real failure to a safer fleet.</h2>
+  <p class="body">Blue boxes are Argon. Orange dashed arrows are the self-correction loops. The green box runs autonomously in Google's sandbox.</p>
+  <div class="arch"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" font-family="-apple-system, BlinkMacSystemFont, Inter, sans-serif" role="img" aria-label="Hindsight architecture">
+  <style>
+    .box { fill: var(--card, #0d0d0f); stroke: var(--line, #2c2c30); stroke-width: 1.5; }
+    .argon { fill: rgba(41,151,255,.14); stroke: #2997ff; stroke-width: 1.8; }
+    .tool { fill: rgba(255,255,255,.04); stroke: var(--line, #2c2c30); stroke-width: 1.5; stroke-dasharray: 0; }
+    .t { fill: var(--ink, #f5f5f7); font-size: 16px; font-weight: 600; }
+    .s { fill: var(--mute, #86868b); font-size: 12.5px; }
+    .lane { fill: var(--mute, #86868b); font-size: 12px; font-weight: 600; letter-spacing: .08em; }
+    .ar { stroke: var(--mute, #86868b); stroke-width: 1.8; fill: none; marker-end: url(#a); }
+    .loop { stroke: #ff9f0a; stroke-width: 1.8; fill: none; stroke-dasharray: 5 4; marker-end: url(#ao); }
+    .lt { fill: #ff9f0a; font-size: 12px; font-weight: 600; }
+    .sandbox { fill: none; stroke: #30d158; stroke-width: 1.6; stroke-dasharray: 7 5; }
+    .sbt { fill: #30d158; font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#86868b"/></marker>
+    <marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ff9f0a"/></marker>
+  </defs>
+
+  <!-- row 1: find -> understand -> rebuild -->
+  <text class="lane" x="20" y="30">FROM REAL FAILURES</text>
+  <rect class="box" x="20" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="36" y="80">Fleet video</text><text class="s" x="36" y="102">front camera + IMU</text><text class="s" x="36" y="120">FrodoBots · Coco</text>
+
+  <rect class="tool" x="230" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="246" y="80">Physics triggers</text><text class="s" x="246" y="102">tilt · free-fall · impact</text><text class="s" x="246" y="120">+ Flash-Lite screen</text>
+
+  <rect class="argon" x="440" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="456" y="80">Argon: confirm</text><text class="s" x="456" y="102">only what it can see</text><text class="s" x="456" y="120">rejects glitches</text>
+
+  <rect class="argon" x="650" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="666" y="80">Argon: diagnose</text><text class="s" x="666" y="102">cause · time · scene</text><text class="s" x="666" y="120">+ its unknowns</text>
+
+  <rect class="argon" x="860" y="48" width="170" height="86" rx="14"/>
+  <text class="t" x="876" y="80">Argon: build twin</text><text class="s" x="876" y="102">MuJoCo physics</text><text class="s" x="876" y="120">must reproduce failure</text>
+
+  <path class="ar" d="M190 91 H226"/><path class="ar" d="M400 91 H436"/><path class="ar" d="M610 91 H646"/><path class="ar" d="M820 91 H856"/>
+  <path class="loop" d="M985 134 C985 168, 905 168, 905 138"/><text class="lt" x="890" y="182">revise until it reproduces</text>
+
+  <!-- row 2: learn + verify inside sandbox -->
+  <text class="lane" x="20" y="232">LEARN SAFELY</text>
+  <rect class="sandbox" x="430" y="210" width="610" height="150" rx="18"/>
+  <text class="sbt" x="446" y="230">ANTIGRAVITY MANAGED AGENT · SANDBOX</text>
+
+  <rect class="argon" x="20" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="36" y="284">Argon: variants</text><text class="s" x="36" y="306">40 realistic copies</text><text class="s" x="36" y="324">of the failure</text>
+
+  <rect class="argon" x="230" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="246" y="284">Argon: reward</text><text class="s" x="246" y="306">written from good &amp;</text><text class="s" x="246" y="324">bad real rides</text>
+
+  <rect class="tool" x="450" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="466" y="284">RL (CMA-ES)</text><text class="s" x="466" y="306">retrains the policy</text><text class="s" x="466" y="324">on the twins</text>
+
+  <rect class="argon" x="660" y="252" width="170" height="86" rx="14"/>
+  <text class="t" x="676" y="284">Argon: verify</text><text class="s" x="676" y="306">watches the result,</text><text class="s" x="676" y="324">hunts reward hacking</text>
+
+  <rect class="box" x="870" y="252" width="150" height="86" rx="14"/>
+  <text class="t" x="886" y="284">Ship / block</text><text class="s" x="886" y="306">human approves</text><text class="s" x="886" y="324">the deploy</text>
+
+  <path class="ar" d="M945 134 C945 200, 105 190, 105 248"/>
+  <path class="ar" d="M190 295 H226"/><path class="ar" d="M400 295 H446"/><path class="ar" d="M620 295 H656"/><path class="ar" d="M830 295 H866"/>
+  <path class="loop" d="M745 338 C745 380, 315 380, 315 342"/><text class="lt" x="440" y="384">hack found → Argon rewrites the reward</text>
+
+  <!-- row 3: fleet + photoreal -->
+  <text class="lane" x="20" y="430">SHARE &amp; SHOW</text>
+  <rect class="box" x="20" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="36" y="484">Each robot</text><text class="s" x="36" y="506">learns locally, uploads</text><text class="s" x="36" y="524">~100 bytes, not video</text>
+
+  <rect class="argon" x="260" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="276" y="484">Argon: fleet gate</text><text class="s" x="276" y="506">accept / reject each</text><text class="s" x="276" y="524">update, every city</text>
+
+  <rect class="box" x="500" y="452" width="170" height="86" rx="14"/>
+  <text class="t" x="516" y="484">Master policy</text><text class="s" x="516" y="506">FedAvg of accepted</text><text class="s" x="516" y="524">updates → fleet</text>
+
+  <path class="ar" d="M945 338 C945 420, 120 410, 120 448"/>
+  <path class="ar" d="M220 495 H256"/><path class="ar" d="M460 495 H496"/>
+
+  <rect class="argon" x="760" y="452" width="200" height="86" rx="14"/>
+  <text class="t" x="776" y="484">Argon: 3D world</text><text class="s" x="776" y="506">twin scene from a few</text><text class="s" x="776" y="524">real frames · what-ifs</text>
+  <rect class="tool" x="1000" y="452" width="180" height="86" rx="14"/>
+  <text class="t" x="1016" y="484">Gemini Omni</text><text class="s" x="1016" y="506">photoreal look,</text><text class="s" x="1016" y="524">twin keeps physics</text>
+  <path class="ar" d="M960 495 H996"/>
+  <path class="ar" d="M1030 134 C1110 200, 1100 400, 900 448"/>
+
+  <!-- legend -->
+  <rect class="argon" x="1060" y="20" width="16" height="12" rx="3"/><text class="s" x="1082" y="31">Argon</text>
+  <rect class="tool" x="1060" y="40" width="16" height="12" rx="3"/><text class="s" x="1082" y="51">tools / other models</text>
+</svg>
+</div>
+</section>
+
+<section class="step">
+  <div class="num">01 · Find</div>
+  <h2>Argon finds real failures in hours of fleet video.</h2>
+  <p class="body">Public robot data almost never labels failures. We scan raw rides from the open <b>FrodoBots-Mini-4K</b> dataset with physics triggers (tilt, free-fall, impact), then <b>Argon confirms only what it can see happen</b>, rejecting the video glitches, speed bumps and ramps that fool sensors.</p>
+  <div class="stats">
+    <div class="stat"><div class="v" id="s-rides">40+</div><div class="k">real rides scanned</div></div>
+    <div class="stat"><div class="v" id="s-cands">130</div><div class="k">sensor candidates</div></div>
+    <div class="stat"><div class="v" id="s-conf">44</div><div class="k">confirmed by Argon</div></div>
+    <div class="stat"><div class="v">15/15</div><div class="k">correct, verified by a human</div></div>
+  </div>
+  <div class="grid">
+    <figure data-needs><video src="../../demo_assets/141102_tip_over_443s/01_real_failure.mp4" autoplay muted loop playsinline></video><figcaption>Clips a barstool leg and rolls onto its side</figcaption></figure>
+    <figure data-needs><video src="../../data/mini4k_clips/138572_tip_over_216s.mp4" autoplay muted loop playsinline></video><figcaption>Drives into a dog's legs</figcaption></figure>
+    <figure data-needs><video src="../../data/mini4k_clips/137907_collision_104s.mp4" autoplay muted loop playsinline></video><figcaption>Sidewalk: hits a parked robot among bikes</figcaption></figure>
+    <figure data-needs><video src="../../data/mini4k_clips/137941_tip_over_467s.mp4" autoplay muted loop playsinline></video><figcaption>Climbs a raised garden edge and flips</figcaption></figure>
+  </div>
+</section>
+
+<section class="step">
+  <div class="num">02 · Understand</div>
+  <h2>It explains what went wrong, and what it can't know.</h2>
+  <p class="body">Argon reads the video and the robot's IMU together, timestamps the failure, estimates the scene for a physics simulator, and lists its own unknowns instead of guessing.</p>
+  <div class="quote" id="diag"><div class="who">Argon · diagnosis</div><span>Loading…</span></div>
+</section>
+
+<section class="step">
+  <div class="num">03 · Rebuild</div>
+  <h2>A digital twin that fails the same way.</h2>
+  <p class="body">Argon turns its diagnosis into a MuJoCo scene and <b>proves it</b>: the twin is accepted only if the robot's original behavior reproduces the failure. If it doesn't, Argon compares sim and reality frame by frame and revises its estimate. Then it plans dozens of realistic variants.</p>
+  <div class="grid">
+    <figure data-needs><video src="../../demo_assets/141102_tip_over_443s/03_twin_old_policy.mp4" autoplay muted loop playsinline></video><figcaption>Twin reproduces the barstool collision</figcaption></figure>
+    <figure data-needs><video src="../../demo_assets/141102_tip_over_443s/04_variants_grid.mp4" autoplay muted loop playsinline></video><figcaption>40 variants of the same failure</figcaption></figure>
+  </div>
+</section>
+
+<section class="step">
+  <div class="num">04 · Look real</div>
+  <h2>Twins you can't tell from the real thing.</h2>
+  <p class="body">Argon rebuilds the scene in 3D from a handful of real frames, and the robot drives its exact recorded path at the real camera height and field of view. <b>Gemini Omni</b> then restyles the render so it looks like the real camera. Geometry and motion come from the twin; Omni only provides the look.</p>
+  <video data-needs src="../../demo_assets/coco_09294dbb/real_twin_omni.mp4" autoplay muted loop playsinline></video>
+  <div class="three"><span>Real</span><span>Argon twin</span><span>+ Omni</span></div>
+  <div style="height:16px"></div>
+  <video data-needs src="../../demo_assets/141102_tip_over_443s/barstool_story.mp4" autoplay muted loop playsinline></video>
+  <div class="three"><span>Real failure (fleet camera)</span><span>Twin: original behavior</span><span>Twin: retrained policy</span></div>
+  <p class="body" style="margin-top:14px;font-size:15px">The barstool twin rendered by Argon's 3D scene + Gemini Omni. Argon's latest verdict on the retrained policy: still grazes the leg, so it is not shipped yet.</p>
+</section>
+
+<section class="step">
+  <div class="num">05 · Learn, safely</div>
+  <h2>RL learns. Argon catches it cheating, then approves the real fix.</h2>
+  <p class="body">Argon writes the reward from good and bad rides, and reinforcement learning retrains the policy on the twins. Then Argon watches the result. Optimizers find shortcuts, and <b>Argon refuses to ship them</b>.</p>
+  <div class="quote"><div class="who"><span class="tag bad">do not ship</span> Argon · verification</div>"Instead of steering around the obstacle, the policy sits stationary for the first 2.5 seconds and then creeps straight into the pole… avoiding the binary collision penalty while farming dense forward-progress shaping."</div>
+  <div class="quote"><div class="who"><span class="tag bad">do not ship</span> Argon · verification, round 2</div>"The policy exploited the simulator's distinction between a terminal head-on collision and a non-terminal side scrape…"</div>
+  <div class="quote" style="border-color:var(--ok)"><div class="who"><span class="tag ok">ship</span> Argon · final verification</div>"The robot smoothly steers left to give the obstacle a wide berth… passes with 0.307 m clearance (at least 0.249 m across all 40 randomized variants)… realigns with its original heading without oscillation, stalling, or collision."</div>
+  <div class="stats"><div class="stat"><div class="v">0% → 100%</div><div class="k">success on 40 twin variants</div></div><div class="stat"><div class="v">100% → 0%</div><div class="k">collisions</div></div><div class="stat"><div class="v">≥ 25 cm</div><div class="k">clearance in every variant</div></div></div>
+  <div class="grid">
+    <figure data-needs><video src="../../demo_assets/141102_tip_over_443s/03_twin_old_policy.mp4" autoplay muted loop playsinline></video><figcaption>Before: original behavior</figcaption></figure>
+    <figure data-needs><video src="../../demo_assets/141102_tip_over_443s/05_twin_new_policy_round2.mp4" autoplay muted loop playsinline></video><figcaption>After RL: Argon still found a loophole</figcaption></figure>
+  </div>
+</section>
+
+<section class="step" data-needs-json="../../demo_assets/141102_tip_over_443s/08_managed_agent.json" id="managed">
+  <div class="num">06 · Autonomous</div>
+  <h2>The whole loop runs in Google's sandbox.</h2>
+  <p class="body">An <b>Antigravity managed agent</b> running Argon gets the simulator, the twin variants and the reward, then installs MuJoCo, retrains, hunts for reward hacking, rewrites the reward and verifies, with no human in the loop until the ship decision.</p>
+  <div class="quote" id="managed-q"><div class="who">Managed agent · report</div><span>Loading…</span></div>
+</section>
+
+<section class="step" data-needs-json="../../demo_assets/fleet/fleet_report.json" id="fleet">
+  <div class="num">07 · Share</div>
+  <h2>Federated robot learning</h2>
+  <p class="body">Each robot learns locally from its own failures and uploads <b>about 100 bytes</b> of policy update instead of gigabytes of video. That is federated learning, and on robots it has always had one blocker: <b>no one can see the data behind an update, so no one can trust it.</b> Argon removes that blocker. It reviews every update against every city, explains its decision in plain language, and blocks the ones that would trade safety for speed or fix one city by breaking another.</p>
+  <div class="savings" id="savings">
+    <div class="hero-num" id="sv-ratio">770,000×</div>
+    <div class="cap">less data uploaded. Today robots upload everything because no one knows which moments matter. Hindsight uploads only what changes the policy.</div>
+    <div class="tiers">
+      <div class="tier"><div class="v" id="t-all">3.57 GB</div><div class="k">upload everything<br><span id="t-all-k">7.7 h of real robot footage</span></div></div>
+      <div class="arrow">→</div>
+      <div class="tier"><div class="v" id="t-fail">68 MB</div><div class="k">only the failure moments<br><span id="t-fail-k">44 failures · 2% of the footage · 53× less</span></div></div>
+      <div class="arrow">→</div>
+      <div class="tier hl"><div class="v" id="t-upd">4.6 KB</div><div class="k">only the policy updates<br><span id="t-upd-k">~105 B per failure learned · 770,000× less</span></div></div>
+    </div>
+    <div class="note" id="sv-note">Measured on real FrodoBots-Mini-4K rides (front camera only). Real robots also stream rear cameras, audio and logs, so the true savings are larger.</div>
+  </div>
+  <div class="stats" id="fleet-stats"></div>
+  <div id="fleet-gate"></div>
+</section>
+
+<section class="step" data-needs-json="../../demo_assets/coco_09294dbb/whatif/whatif_grid.json" id="whatif">
+  <div class="num">08 · What if</div>
+  <h2>One real clip. Many dangerous futures.</h2>
+  <p class="body">From a normal Coco ride, the twin asks <b>what if</b>: the pickup runs the light, a pedestrian steps out, a ramp becomes a sudden drop (real MuJoCo physics), a scooter cuts across. Top: the robot as recorded. Bottom: the retrained policy.</p>
+  <video src="../../demo_assets/coco_09294dbb/whatif/whatif_grid.mp4" autoplay muted loop playsinline></video>
+</section>
+
+<section class="step" id="teams">
+  <div class="num">For robotics teams</div>
+  <h2>Your fleet already records its mistakes.</h2>
+  <p class="body">Hindsight turns them into <b>reproducible test cases, verified fixes and safe fleet updates</b>, without a human scrubbing footage. Built for autonomy engineers, fleet operations and safety teams running sidewalk, warehouse and home robots.</p>
+  <div class="teams">
+    <div class="pain"><div class="q">"We log terabytes and can't find the failures."</div><div class="a"><b>Automatic failure mining</b> with timestamps, cause and visual evidence. Glitch-resistant: 15/15 correct on human review.</div></div>
+    <div class="pain"><div class="q">"We can't reproduce field failures in sim."</div><div class="a">A <b>twin that reproduces the failure</b>, checked against reality, plus dozens of variants. Every field failure becomes a <b>regression test</b>.</div></div>
+    <div class="pain"><div class="q">"The retrained policy passes the tests but cheats."</div><div class="a">An <b>AI reviewer</b> watches before/after behavior and blocks gamed fixes. It blocked 7+ policies before approving the real fix.</div></div>
+    <div class="pain"><div class="q">"An update fixed one site and broke another."</div><div class="a"><b>Per-site gating</b>: every update is checked against every city's scenarios before rollout, with a written reason.</div></div>
+    <div class="pain"><div class="q">"Uploading all footage is costly and a privacy risk."</div><div class="a">Upload <b>only what matters</b>: failure moments (53× less) or just policy updates (~770,000× less). Bystander footage stays on the robot.</div></div>
+    <div class="pain"><div class="q">"The long tail is too rare to train on."</div><div class="a"><b>What-if scenarios</b> from normal rides: what if that truck ran the light?</div></div>
+  </div>
+  <div class="inbox"><div class="who">Monday morning, in your inbox (illustrative)</div>
+    Overnight: <b>12 new failures</b> found across the fleet · <b>9 reproduced</b> in sim · <b>6 fixes</b> trained · <b>4 passed review</b> and await your approval · <b>2 blocked</b> for reward hacking (see why).</div>
+  <p class="body" style="font-size:15px">Plugs into existing logs (LeRobot, ROS bags, MCAP: video, IMU, commands) and outputs failure tickets, sim scenarios, regression suites, reward/policy patches with verification reports, and a fleet-update gate for CI/CD. Today's prototype uses MuJoCo and a small tunable policy; in production it would drive your simulator, robot model and neural policy. Argon's roles stay the same. A human approves every deploy.</p>
+</section>
+
+<section class="step" id="agents">
+  <div class="num">The agents</div>
+  <h2>A team of agents, led by Argon.</h2>
+  <p class="body">Each agent does one job. <b>Argon orchestrates</b>: it decides, writes code, builds worlds and has the final say on safety. The others are tools it delegates to.</p>
+  <div class="agents">
+    <div class="agent lead"><div class="model">gemini-4-argon</div><h3>Argon: lead agent</h3>
+      <p>Perceives, reasons, codes and judges across the whole loop.</p>
+      <ul>
+        <li><b>Failure auditor</b>: confirms only failures it can see, rejects glitches</li>
+        <li><b>Diagnostician</b>: fuses video + IMU into a timestamped cause</li>
+        <li><b>Twin builder</b>: turns the diagnosis into physics and revises until it reproduces</li>
+        <li><b>Scenario planner</b>: chooses which variants to generate</li>
+        <li><b>Reward engineer</b>: writes the RL reward from good and bad rides</li>
+        <li><b>Safety verifier</b>: watches the retrained robot, catches reward hacking</li>
+        <li><b>Fleet gatekeeper</b>: accepts or rejects each robot's update</li>
+        <li><b>World builder</b>: writes the 3D twin scene from a few real frames</li>
+      </ul></div>
+    <div class="agent"><div class="model">antigravity-preview-09-2026 · model gemini-4-argon</div><h3>Managed agent: the autonomous lab</h3>
+      <p>In a Google-hosted sandbox it installs MuJoCo, retrains, hunts for reward hacking, rewrites the reward and re-verifies with no human in the loop.</p></div>
+    <div class="agent"><div class="model">gemini-omni-1.1-flash</div><h3>Omni: the cinematographer</h3>
+      <p>Restyles twin renders to look like the real robot camera, keeping the twin's geometry and motion.</p></div>
+    <div class="agent"><div class="model">gemini-3.5-flash-lite</div><h3>Flash-Lite: the fleet screener</h3>
+      <p>Cheap first pass over large numbers of fleet clips, so Argon spends its reasoning only on what matters.</p></div>
+    <div class="agent"><div class="model">MuJoCo · CMA-ES</div><h3>Physics + RL: the gym</h3>
+      <p>The digital twin's physics and the reinforcement-learning optimizer. They are not LLMs: they train the robot, and Argon checks the result.</p></div>
+  </div>
+</section>
+
+<section class="step">
+  <div class="num">Why Argon</div>
+  <h2>What would not be possible without Argon.</h2>
+  <p class="body">Every step below needs one model to watch video, read sensor logs, write and debug code, and reason about physics in a single loop. Without Argon, each of these is a team of specialists, or it doesn't happen at all.</p>
+  <ul class="only">
+    <li><b>Video + sensor fusion with honest uncertainty.</b> It confirms failures only when it can see them, and calls out telemetry glitches.</li>
+    <li><b>Self-correcting twins.</b> It compares sim to reality and revises the physics until the failure reproduces.</li>
+    <li><b>Rewards written from observation</b>, then defended against an optimizer that is actively trying to game them.</li>
+    <li><b>A skeptical reviewer</b> that blocks unsafe policies and unsafe fleet updates, inside an autonomous sandbox loop.</li>
+    <li><b>Full 3D scenes from a few frames</b>, matched to a real camera.</li>
+  </ul>
+</section>
+
+<footer>
+  Data: FrodoBots-Mini-4K (CC-BY-SA-4.0) and BitRobot/berkeley-frodobots-lerobot-7k (Apache-2.0); Coco Robotics sample clips from VAIL-UCLA/MIMIC (credited, not redistributed). Physics: MuJoCo. Models: Gemini 4 Argon, Gemini 3.5 Flash-Lite, Gemini Omni Flash, Antigravity managed agent. Built in one day at the Gemini 4 Argon SF Hackathon.
+</footer>
+</div>
+<script>
+// hide anything whose asset hasn't been produced yet
+document.querySelectorAll("[data-needs]").forEach(el => {
+  const v = el.tagName === "VIDEO" ? el : el.querySelector("video");
+  if (v) v.addEventListener("error", () => el.classList.add("missing"), { once: true });
+});
+async function j(u) { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? r.json() : null; } catch (e) { return null; } }
+(async () => {
+  const conf = await j("../../data/mini4k_clips/confirmed.json");
+  if (conf) {
+    document.getElementById("s-cands").textContent = conf.length;
+    document.getElementById("s-conf").textContent = conf.filter(c => c.pred !== "none").length;
+    document.getElementById("s-rides").textContent = new Set(conf.map(c => c.ride)).size + "+";
+  }
+  const d = await j("../../demo_assets/141102_tip_over_443s/02_diagnosis.json");
+  if (d) document.querySelector("#diag span").innerHTML =
+    `<span class="tag bad">${d.failure_type}</span> at ${d.t_sec}s · confidence ${d.confidence}<br><br>"${d.cause}"<br><br><span style="color:var(--mute)">Unknowns: ${d.unknowns.join("; ")}</span>`;
+  for (const sec of document.querySelectorAll("[data-needs-json]")) {
+    const data = await j(sec.dataset.needsJson);
+    if (!data) { sec.classList.add("missing"); sec.style.display = "none"; continue; }
+    if (sec.id === "managed") {
+      document.querySelector("#managed-q span").innerHTML = `${data.ship ? '<span class="tag ok">ship</span>' : '<span class="tag bad">do not ship</span>'}
+        ${data.hacking_found ? "Found reward hacking: " + (data.hack_description || "") : ""}<br><br>${data.notes || ""}<br><br>
+        <span style="color:var(--mute)">${(data.rounds || []).map((r, i) => `round ${i + 1}: success ${Math.round((r.before?.success_rate ?? 0) * 100)}% → ${Math.round((r.after?.success_rate ?? 0) * 100)}%`).join(" · ")} · ${data.minutes} min in sandbox</span>`;
+    }
+    if (sec.id === "fleet") {
+      const h = data.history, last = h[h.length - 1];
+      const bytes = Math.max(...h.flatMap(r => r.updates.map(u => u.upload_bytes)));
+      const rejected = h.flatMap(r => r.gate.decisions.filter(d => !d.accept)).length;
+      const accepted = h.flatMap(r => r.gate.decisions.filter(d => d.accept)).length;
+      const sv = await j("../../demo_assets/fleet/data_savings.json");
+      if (sv && sv.tiered) {
+        const t = sv.tiered;
+        const fmt = b => b >= 1e9 ? (b / 1e9).toFixed(2) + " GB" : b >= 1e6 ? Math.round(b / 1e6) + " MB" : b >= 1e3 ? (b / 1e3).toFixed(1) + " KB" : Math.round(b) + " B";
+        document.getElementById("t-all").textContent = t.raw_video_gb.toFixed(2) + " GB";
+        document.getElementById("t-all-k").textContent = `${t.hours_scanned} h of real robot footage`;
+        document.getElementById("t-fail").textContent = Math.round(t.failure_video_mb) + " MB";
+        document.getElementById("t-fail-k").textContent = `${t.confirmed_failures} failures · ${(t.failure_share_of_footage * 100).toFixed(0)}% of the footage · ${t.ratio_raw_vs_failures}× less`;
+        document.getElementById("t-upd").textContent = fmt(t.update_bytes * t.confirmed_failures);
+        document.getElementById("t-upd-k").textContent = `~${t.update_bytes} B per failure learned · ${t.ratio_raw_vs_update_per_failure.toLocaleString()}× less`;
+        document.getElementById("sv-ratio").textContent = (Math.round(t.ratio_raw_vs_update_per_failure / 1e4) * 1e4).toLocaleString() + "×";
+      }
+      document.getElementById("fleet-stats").innerHTML = `
+        <div class="stat"><div class="v">${bytes} B</div><div class="k">largest update any robot sent</div></div>
+        <div class="stat"><div class="v">${accepted}</div><div class="k">updates accepted by Argon</div></div>
+        <div class="stat"><div class="v">${rejected}</div><div class="k">unsafe updates blocked by Argon</div></div>`;
+      document.getElementById("fleet-gate").innerHTML = h.flatMap(r => r.gate.decisions).slice(0, 4).map(d =>
+        `<div class="quote"><div class="who"><span class="tag ${d.accept ? "ok" : "bad"}">${d.accept ? "accept" : "reject"}</span> Argon · ${d.robot}</div>${d.reason}</div>`).join("");
+    }
+  }
+})();
+</script>
+</body>
+</html>

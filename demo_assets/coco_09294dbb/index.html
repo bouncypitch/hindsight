@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coco Twin</title>
+<style>
+:root{--bg:#0b0b0d;--card:#151518;--ink:#f4f4f5;--mute:#9b9ba3;--line:#26262b;--accent:#3b82f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif}
+header,main{max-width:1100px;margin:0 auto;padding:16px}h1{margin:12px 0 0;font-size:26px;font-weight:650}.sub{color:var(--mute)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:18px}
+h2{margin:0 0 8px;font-size:16px}video,iframe{width:100%;border-radius:10px;background:#000;display:block;border:0}
+iframe{aspect-ratio:16/9}.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}a.btn{color:#fff;background:var(--accent);padding:6px 12px;border-radius:8px;text-decoration:none;font-size:14px}
+.lbl{display:grid;grid-template-columns:1fr 1fr;color:var(--mute);font-size:13px;margin-top:6px;text-align:center}
+</style></head><body>
+<header><h1>Digital twin of a real Coco fleet clip</h1>
+<div class="sub">Clip 09294dbb (downtown Miami, night). Argon rebuilt the scene from 6 real frames; the twin robot drives the exact recorded path at the same camera height (0.456 m) and field of view (110°). Argon's own match score: 5/10, so the layout matches but it doesn't look photoreal yet.</div></header>
+<main>
+<div class="card"><h2>Real &middot; Argon twin &middot; twin + Gemini Omni photoreal pass</h2>
+<video src="real_twin_omni.mp4" controls autoplay muted loop playsinline></video>
+<div class="lbl" style="grid-template-columns:1fr 1fr 1fr"><span>real Coco camera</span><span>Argon's 3D twin (geometry, motion)</span><span>twin restyled by Omni (look)</span></div>
+<div class="sub" style="margin-top:6px">Omni keeps the twin's layout, camera path and timing but can change small details (it turned the red pickup into a red sedan); the physics and positions always come from the twin.</div></div>
+<div class="card"><h2>Real (left) vs twin (right), same camera, same moments</h2>
+<video src="real_vs_twin.mp4" controls autoplay muted loop playsinline></video><div class="lbl"><span>real Coco robot camera</span><span>Argon's twin</span></div></div>
+<div class="card"><h2>Chase camera: the robot inside the twin</h2><video src="twin_chase.mp4" controls autoplay muted loop playsinline></video></div>
+<div class="card"><h2>Live 3D twin (runs in your browser)</h2>
+<iframe src="twin.html?traj=trajectory.json&cam=chase"></iframe>
+<div class="row"><a class="btn" href="twin.html?traj=trajectory.json&cam=robot" target="_blank">Open robot camera</a>
+<a class="btn" href="twin.html?traj=trajectory.json&cam=chase" target="_blank">Open chase camera</a>
+<a class="btn" href="../../data/coco_samples/index.html" target="_blank">Original Coco clips</a></div></div>
+</main></body></html>

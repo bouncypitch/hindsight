@@ -1,0 +1,37 @@
+{
+ "failed": true,
+ "t_sec": 8.1,
+ "failure_type": "rollover",
+ "cause": "The robot's left wheels collided with and climbed up the wooden chair/table legs on the left side of its path. After an initial stop and two brief aborted pushes, a final forward lunge drove the left side high up the furniture leg until the robot rolled ~90 degrees onto its right side (reaching the tipping point at ~8.1–8.25 s in the video, corresponding to t = 6.94–7.14 s in the IMU log where ay_g rises to 0.55–0.83 g and az_g drops below 0.3 g before settling at ay_g ≈ 0.97 g, az_g ≈ -0.06 g).",
+ "evidence": [
+  "00:00.000–00:01.250 (IMU 0.56–0.86 s): Robot drives forward at ~0.25 m/s on an indoor rug alongside wooden furniture legs on its left (+0.15 m lateral offset), grazing past the first leg with an IMU spike of az_g = 1.952 g, ay_g = -0.621 g at t = 0.76 s.",
+  "00:01.875–00:03.125 (IMU 1.26–1.76 s): Robot is blocked by the next wooden leg on its left; two brief forward pushes pitch/roll the chassis slightly (az_g drops to 0.13 g at t = 1.46 s) before the robot stops.",
+  "00:03.250–00:07.375 (IMU 1.86–6.04 s): Robot remains stationary on the flat rug (ax_g ≈ -0.024 g, ay_g ≈ -0.031 g, az_g ≈ 1.004 g).",
+  "00:07.500–00:08.625 (IMU 6.14–7.24 s): Robot lunges forward into the left-side furniture leg; the left wheels climb the leg, causing the chassis to roll right past the point of no return around 00:08.125–00:08.250 (IMU t = 7.04–7.14 s, az_g = 0.284 g to -0.426 g) and impact on its right side at 00:08.625 (IMU t = 7.24 s, ay_g = 1.146 g).",
+  "00:08.625–00:11.875 (IMU 7.34–12.0 s): Robot lies immobile on its right side with gravity aligned along the +y axis (ay_g ≈ 0.97 g, az_g ≈ -0.06 g). Note: IMU timestamps lead video timestamps by ~1.35 s."
+ ],
+ "scene": {
+  "scenario_kind": "obstacle",
+  "obstacle_distance_m": 0.15,
+  "obstacle_lateral_m": 0.15,
+  "obstacle_radius_m": 0.03,
+  "mover_speed_mps": 0.0,
+  "curb_height_m": 0.0,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "speed_mps": 0.25,
+  "t_edge_sec": null,
+  "surface": "indoor carpet / area rug",
+  "other_factors": [
+   "Multiple wooden chair/table legs on the left side under a overhanging tablecloth",
+   "High traction on indoor rug allowed the left wheel to climb the curved wooden leg rather than slip",
+   "~1.35 s timestamp offset between video frames (rollover at ~8.25 s) and IMU log (rollover at ~7.0 s)"
+  ]
+ },
+ "confidence": 0.85,
+ "unknowns": [
+  "Exact synchronization offset (~1.35 s) between video timestamps and IMU log timestamps",
+  "Exact wheel torque/speed commands during the final lunge at 00:07.500",
+  "Payload mass and center-of-gravity height in the cargo bay"
+ ]
+}

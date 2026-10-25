@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Failure Review</title>
+<style>
+  :root { --bg:#fafafa; --card:#fff; --ink:#111; --mute:#6b6b70; --line:#e6e6ea; --ok:#1f9d55; --bad:#d64545; --accent:#0a66ff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e0e10; --card:#18181b; --ink:#f2f2f3; --mute:#9a9aa2; --line:#2a2a30; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+  header { position:sticky; top:0; z-index:2; background:var(--bg); border-bottom:1px solid var(--line); padding:14px 16px; display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+  h1 { font-size:18px; margin:0; font-weight:600; }
+  .stat { color:var(--mute); font-size:13px; }
+  .stat b { color:var(--ink); }
+  button { font:inherit; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:6px 12px; cursor:pointer; }
+  button.sel-ok { background:var(--ok); color:#fff; border-color:var(--ok); }
+  button.sel-bad { background:var(--bad); color:#fff; border-color:var(--bad); }
+  select { font:inherit; padding:5px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  main { padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:16px; }
+  @media (max-width: 480px) { main { grid-template-columns: 1fr; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .media { aspect-ratio:16/9; background:#000; }
+  .media video, .media iframe { width:100%; height:100%; border:0; display:block; }
+  .body { padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--mute); }
+  .pill.fail { color:#fff; background:var(--accent); border-color:var(--accent); }
+  .pill.mismatch { color:#fff; background:var(--bad); border-color:var(--bad); }
+  ul { margin:0; padding-left:18px; color:var(--mute); font-size:13px; }
+  .id { font-family: ui-monospace, Menlo, monospace; font-size:12px; color:var(--mute); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Failure detection review</h1>
+  <span class="stat" id="stats"></span>
+  <select id="filter">
+    <option value="argon-fail">Argon says failure</option>
+    <option value="all">All clips (incl. rejected)</option>
+    <option value="mismatch">Argon disagrees with label</option>
+    <option value="unreviewed">Not yet reviewed by you</option>
+  </select>
+  <button id="export">Export my review (JSON)</button>
+</header>
+<main id="grid"></main>
+<script>
+const P = new URLSearchParams(location.search);
+const DATA = P.get("data") || "results_argon.json";
+const KEY = "curbsense-review-v1:" + DATA;
+let review = {};
+try { review = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(review)); } catch (e) {} };
+
+function media(r) {
+  if (r.source.startsWith("http")) {
+    const id = r.source.includes("shorts/") ? r.source.split("shorts/")[1] : new URL(r.source).searchParams.get("v");
+    return `<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen loading="lazy"></iframe>`;
+  }
+  return `<video src="/${r.source}" controls preload="metadata" muted playsinline></video>`;
+}
+
+function render(results) {
+  const f = document.getElementById("filter").value;
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for (const r of results) {
+    const argonFail = r.pred !== "none";
+    const mismatch = r.label !== "unlabeled" && (r.pred === "none") !== (r.label === "none");
+    const mine = review[r.id];
+    if (f === "argon-fail" && !argonFail) continue;
+    if (f === "mismatch" && !mismatch) continue;
+    if (f === "unreviewed" && mine) continue;
+    const d = r.pred_detail || {};
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="media">${media(r)}</div>
+      <div class="body">
+        <div class="row">
+          <span class="pill ${argonFail ? "fail" : ""}">Argon: ${r.pred}${d.t_sec != null ? " @ " + d.t_sec + "s" : ""}</span>
+          ${r.label !== "unlabeled" ? `<span class="pill">label: ${r.label} (${r.labeled_by})</span>` : ""}
+          ${mismatch ? '<span class="pill mismatch">disagree</span>' : ""}
+          <span class="pill">${r.view} camera</span>
+        </div>
+        <div class="id">${r.id} · ${r.note || ""}</div>
+        ${d.other_description ? `<div class="stat">${d.other_description}</div>` : ""}
+        ${(d.visual_evidence || []).length ? "<ul>" + d.visual_evidence.map(e => `<li>${e}</li>`).join("") + "</ul>" : ""}
+        ${(d.artifacts_seen || []).length ? "<ul><li><b>artifacts:</b> " + d.artifacts_seen.join("; ") + "</li></ul>" : ""}
+        <div class="row">
+          <span class="stat">Is Argon right?</span>
+          <button data-v="ok" class="${mine === "ok" ? "sel-ok" : ""}">✓ correct</button>
+          <button data-v="bad" class="${mine === "bad" ? "sel-bad" : ""}">✗ wrong</button>
+        </div>
+      </div>`;
+    card.querySelectorAll("button[data-v]").forEach(b => b.onclick = () => {
+      review[r.id] = b.dataset.v; save(); render(results); stats(results);
+    });
+    grid.appendChild(card);
+  }
+}
+
+function stats(results) {
+  const n = results.length, said = results.filter(r => r.pred !== "none").length;
+  const done = results.filter(r => review[r.id]).length, ok = results.filter(r => review[r.id] === "ok").length;
+  const m = window.__metrics || {};
+  const lab = m.precision != null ? ` · label-based precision <b>${(m.precision * 100).toFixed(0)}%</b>, recall <b>${(m.recall * 100).toFixed(0)}%</b>` : "";
+  document.getElementById("stats").innerHTML =
+    `<b>${n}</b> candidates · Argon confirms <b>${said}</b> failures${lab} · you reviewed <b>${done}</b>, agree on <b>${ok}</b>`;
+}
+
+fetch(DATA).then(r => r.json()).then(j => {
+  window.__metrics = j.metrics || {};
+  // mined candidates (no ground-truth label yet) come as a plain list
+  const raw = Array.isArray(j) ? j.map(c => ({ id: c.clip.split("/").pop().replace(".mp4", ""), source: c.clip, view: "robot",
+      label: "unlabeled", labeled_by: "-", note: `sensor trigger: ${c.detail}`, pred: c.pred, pred_detail: c.pred_detail })) : j.results;
+  const results = raw.sort((a, b) => (b.pred !== "none") - (a.pred !== "none"));
+  document.getElementById("filter").onchange = () => render(results);
+  document.getElementById("export").onclick = () => {
+    const blob = new Blob([JSON.stringify(review, null, 1)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "my_review.json"; a.click();
+  };
+  stats(results); render(results);
+});
+</script>
+</body>
+</html>

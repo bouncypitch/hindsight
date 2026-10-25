@@ -1,0 +1,38 @@
+{
+ "failed": true,
+ "t_sec": 8.0,
+ "failure_type": "rollover",
+ "cause": "After driving past a large dog under a desk and reversing back out, the robot drove forward into the dog's hind legs (around 00:07.375 in the video / 6.86 s in the IMU log) and was tipped backward onto its rear (~85° pitch-up, ay_g ≈ 0.95 g, az_g ≈ 0.1 g at t = 7.16–9.56 s) before rolling onto its right side (ax_g ≈ 1.0 g, az_g ≈ -0.1 g from t = 9.96 s onward). Video timestamps lag the IMU log by ~1.3–1.4 s with frozen video frames (e.g., 00:07.500–00:08.000), so the IMU is trusted for timing and kinematics while the video is trusted for identifying the dog collision.",
+ "evidence": [
+  "00:00.000–00:01.875 (video) / t=0.02–0.42 s (IMU): Robot starts on indoor carpet facing a standing white dog (~0.8 m ahead, ~0.15 m to the left of the initial path).",
+  "00:02.000–00:03.750 (video) / t=0.52–2.40 s (IMU): Robot accelerates forward (ay_g = 0.467 g at t=0.52 s), passes to the right of the dog's legs, and brakes to a stop under the desk (ay_g = -0.667 g at t=2.20 s).",
+  "00:05.125–00:06.000 (video) / t=3.60–4.60 s (IMU): Robot reverses out from under the desk (ay_g = -0.370 g at t=3.70 s) and stops directly behind the dog's hind legs (~0.25 m away).",
+  "00:06.625–00:07.500 (video) / t=6.56–6.96 s (IMU): Robot accelerates forward into the dog's hind legs (ay_g = 0.432 g at t=6.56 s, speed ~0.45 m/s); video frames freeze between 00:07.500 and 00:08.000.",
+  "00:08.375–00:11.125 (video) / t=7.06–9.66 s (IMU): Robot flips backward ~85° onto its rear/back (ay_g spikes to 1.426 g at t=7.16 s and settles near 0.90–0.98 g while az_g drops to ~0.0–0.25 g), pointing the camera up at the ceiling fan and the underside of the dog for ~2.6 s.",
+  "00:11.250–00:11.875 (video) / t=9.86–11.92 s (IMU): Robot falls from its back onto its right side (ax_g ≈ 0.93–1.04 g, ay_g ≈ 0.0 g, az_g ≈ -0.05 to -0.28 g), coming to rest sideways on the carpet.",
+  "Cross-check: Video and IMU show the exact same motion sequence and 2.6 s pitched-up duration, but video timestamps lag IMU timestamps by ~1.3–1.4 s and suffer from frame freezes; we trust the IMU for exact timing and the video for scene identification."
+ ],
+ "scene": {
+  "scenario_kind": "pedestrian",
+  "obstacle_distance_m": 0.8,
+  "obstacle_lateral_m": 0.1,
+  "obstacle_radius_m": 0.15,
+  "mover_speed_mps": 0.2,
+  "curb_height_m": 0.0,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "speed_mps": 0.45,
+  "t_edge_sec": null,
+  "surface": "indoor carpet",
+  "other_factors": [
+   "Large dog standing in narrow indoor gap between couch and desk",
+   "Robot reverses and re-approaches directly into the dog's hind legs",
+   "Video stream lags IMU log by ~1.3–1.4 s with dropped/frozen frames"
+  ]
+ },
+ "confidence": 0.85,
+ "unknowns": [
+  "Exact clock offset (~1.3–1.4 s) between video frame timestamps and IMU log timestamps due to camera stream freezes",
+  "Whether a human or the dog's leg movement actively lifted/pushed the front of the robot during the frozen video frames (00:07.500–00:08.000)"
+ ]
+}

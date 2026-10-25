@@ -1,0 +1,34 @@
+{
+ "failed": true,
+ "t_sec": 9.0,
+ "failure_type": "collision",
+ "cause": "After turning left and pausing for nearly four seconds facing a low white concrete barrier and a large cone marked '3', the robot accelerated straight forward at 7.625 s and collided head-on with the barrier at 9.000 s. The IMU log does not match the video timeline (showing motion and a 0.95 g lateral spike at 7.02 s while the video shows the robot completely stationary), so the video is trusted.",
+ "evidence": [
+  "00:00.000-00:03.750: Robot executes a left turn on dry concrete tiles in low-light nighttime conditions, coming to face a white barrier and cone '3' roughly 1.2 m ahead.",
+  "00:03.750-00:07.500: Robot remains completely stationary in the video; however, the IMU log reports stillness from t=1.86 s to 5.16 s and strong acceleration spikes at t=7.02 s (ay_g=-0.945, ax_g=0.613), indicating the IMU log is desynchronized or mismatched.",
+  "00:07.625-00:09.000: Robot drives straight forward ~1.2 m over 1.375 s (~0.9 m/s) directly into the white barrier next to cone '3'.",
+  "00:09.000-00:10.500: Front of the robot impacts and presses against the barrier before reversing slightly at 00:10.625-00:11.250."
+ ],
+ "scene": {
+  "scenario_kind": "obstacle",
+  "obstacle_distance_m": 1.2,
+  "obstacle_lateral_m": 0.0,
+  "obstacle_radius_m": 0.3,
+  "mover_speed_mps": 0.0,
+  "curb_height_m": 0.0,
+  "slope_deg": 0.0,
+  "approach_angle_deg": 0.0,
+  "speed_mps": 0.9,
+  "t_edge_sec": null,
+  "surface": "dry concrete",
+  "other_factors": [
+   "nighttime low-light environment",
+   "IMU log is desynchronized or mismatched relative to video frames"
+  ]
+ },
+ "confidence": 0.85,
+ "unknowns": [
+  "Exact time offset or source of mismatch between the IMU log and the video frames",
+  "Exact distance and speed without calibrated wheel odometry"
+ ]
+}

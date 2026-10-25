@@ -1,0 +1,17 @@
+{
+ "gb_per_robot_hour": 0.461,
+ "hours_measured": 7.74,
+ "uploads": 12,
+ "upload_bytes_total": 1264,
+ "upload_bytes_mean": 105,
+ "tiered": {
+  "hours_scanned": 7.74,
+  "raw_video_gb": 3.57,
+  "confirmed_failures": 44,
+  "failure_video_mb": 67.6,
+  "failure_share_of_footage": 0.0189,
+  "ratio_raw_vs_failures": 53,
+  "update_bytes": 105,
+  "ratio_raw_vs_update_per_failure": 772325
+ }
+}

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CurbSense Live</title>
+<style>
+  :root { --bg:#000; --card:#0f0f11; --ink:#f5f5f7; --mute:#86868b; --line:#222226; --accent:#2997ff; --bad:#ff453a; --ok:#30d158; --warn:#ff9f0a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+  header { display:flex; align-items:baseline; gap:16px; padding:18px 20px 10px; flex-wrap:wrap; }
+  h1 { margin:0; font-size:24px; letter-spacing:-.01em; }
+  .mute { color:var(--mute); }
+  .wrap { display:grid; grid-template-columns:300px 1fr; gap:16px; padding:0 20px 20px; }
+  @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; }
+  .gallery { display:flex; flex-direction:column; gap:10px; max-height:calc(100vh - 90px); overflow:auto; }
+  .item { display:flex; gap:10px; align-items:center; padding:8px; border-radius:12px; border:1px solid transparent; cursor:pointer; }
+  .item:hover { border-color:var(--line); } .item.sel { border-color:var(--accent); background:rgba(41,151,255,.08); }
+  .item video { width:110px; height:62px; object-fit:cover; border-radius:8px; background:#111; flex:none; }
+  .item .n { font-size:13px; } .item .k { font-size:12px; color:var(--mute); }
+  .main { display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .top { display:grid; grid-template-columns:1.25fr 1fr; gap:16px; }
+  @media (max-width:1100px) { .top { grid-template-columns:1fr; } }
+  video.big { width:100%; border-radius:12px; background:#000; display:block; }
+  button { font:inherit; font-weight:600; border:0; border-radius:10px; padding:10px 16px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .timer { font-variant-numeric:tabular-nums; color:var(--warn); font-weight:600; }
+  .card h3 { margin:0 0 8px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
+  .tag { display:inline-block; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px; margin-right:6px; }
+  .tag.bad { background:var(--bad); color:#fff; } .tag.ok { background:var(--ok); color:#000; } .tag.run { background:var(--warn); color:#000; }
+  ul { margin:6px 0 0; padding-left:18px; color:var(--mute); font-size:13px; }
+  .steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; }
+  .steps .s video { width:100%; border-radius:10px; background:#000; }
+  .steps .s .cap { font-size:13px; color:var(--mute); margin-top:6px; }
+  .big-num { font-size:56px; font-weight:800; letter-spacing:-.04em; background:linear-gradient(90deg,#2997ff,#30d158); -webkit-background-clip:text; color:transparent; }
+  .dec { padding:8px 0; border-top:1px solid var(--line); font-size:14px; }
+</style>
+</head>
+<body>
+<header><h1>CurbSense · live</h1><span class="mute">Pick a real fleet failure → Argon analyzes it live → see what the loop did with it</span></header>
+<div class="wrap">
+  <div class="panel gallery" id="gallery"></div>
+  <div class="main">
+    <div class="top">
+      <div class="panel">
+        <video class="big" id="clip" controls autoplay muted loop playsinline></video>
+        <div class="row" style="margin-top:12px">
+          <button id="go">Run Argon live on this clip</button>
+          <span class="timer" id="timer"></span>
+        </div>
+      </div>
+      <div class="panel card" id="live"><h3>Argon · live</h3><div class="mute">Press the button. Argon confirms the failure and diagnoses it, in parallel.</div></div>
+    </div>
+    <div class="panel card"><h3>What the loop did with this failure (precomputed)</h3><div class="steps" id="steps"><div class="mute">Select a case with a full pipeline run.</div></div></div>
+    <div class="panel card">
+      <h3>Federated robot learning · Argon fleet gate (live)</h3>
+      <div class="row"><div><div class="big-num">35,000,000×</div><div class="mute">less data than uploading camera footage (~105 B per update vs 3.7 GB per robot-shift)</div></div>
+      <button id="gate" style="margin-left:auto">Ask Argon to review 4 robot updates</button><span class="timer" id="gtimer"></span></div>
+      <div id="gateout"></div>
+    </div>
+  </div>
+</div>
+<script>
+const CASES = [
+  { id: "141102_tip_over_443s", clip: "data/mini4k_clips/141102_tip_over_443s.mp4", title: "Barstool flip", where: "indoor · full pipeline" },
+  { id: "138572_tip_over_216s", clip: "data/mini4k_clips/138572_tip_over_216s.mp4", title: "Hits a dog's legs", where: "indoor · rare case" },
+  { id: "137907_collision_104s", clip: "data/mini4k_clips/137907_collision_104s.mp4", title: "Sidewalk: hits a parked robot", where: "outdoor" },
+  { id: "138587_tip_over_1108s", clip: "data/mini4k_clips/138587_tip_over_1108s.mp4", title: "Chair leg tip-over", where: "indoor" },
+  { id: "137941_tip_over_467s", clip: "data/mini4k_clips/137941_tip_over_467s.mp4", title: "Mulch curb flip", where: "outdoor · curb" },
+  { id: "141105_collision_47s", clip: "data/mini4k_clips/141105_collision_47s.mp4", title: "Wall collision at night", where: "outdoor" },
+];
+let cur = CASES[0];
+const $ = id => document.getElementById(id);
+async function j(u) { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? r.json() : null; } catch (e) { return null; } }
+
+function gallery() {
+  $("gallery").innerHTML = CASES.map((c, i) => `<div class="item ${c === cur ? "sel" : ""}" data-i="${i}">
+    <video src="/${c.clip}" muted loop playsinline autoplay></video><div><div class="n">${c.title}</div><div class="k">${c.where}</div></div></div>`).join("");
+  document.querySelectorAll(".item").forEach(el => el.onclick = () => { cur = CASES[+el.dataset.i]; select(); });
+}
+async function select() {
+  gallery();
+  $("clip").src = "/" + cur.clip;
+  $("live").innerHTML = '<h3>Argon · live</h3><div class="mute">Press the button. Argon confirms the failure and diagnoses it, in parallel.</div>';
+  $("timer").textContent = "";
+  const base = `/demo_assets/${cur.id}/`;
+  const m = await j(base + "manifest.json");
+  if (!m) { $("steps").innerHTML = '<div class="mute">No pipeline run for this clip yet. The live analysis still works.</div>'; return; }
+  const items = [];
+  const vid = (p, cap) => items.push(`<div class="s"><video src="${p}" autoplay muted loop playsinline></video><div class="cap">${cap}</div></div>`);
+  vid(base + "03_twin_old_policy.mp4", "Twin reproduces the failure");
+  vid(base + "04_variants_grid.mp4", "Variants of the same failure");
+  const rl = (await j(base + "05_rl_round2.json")) || (await j(base + "05_rl_round1.json"));
+  const ver = (await j(base + "06_verdict_round2.json")) || (await j(base + "06_verdict_round1.json"));
+  if (rl) items.push(`<div class="s"><div class="big-num" style="font-size:44px">${Math.round(rl.before.success_rate * 100)}% → ${Math.round(rl.after.success_rate * 100)}%</div><div class="cap">success on the twin variants after RL</div></div>`);
+  if (ver) items.push(`<div class="s"><span class="tag ${ver.ship ? "ok" : "bad"}">${ver.ship ? "ship" : "do not ship"}</span>${ver.reward_hacking ? '<span class="tag bad">reward hacking</span>' : ""}<div class="cap" style="color:var(--ink);font-size:14px">${(ver.hack_description || "").slice(0, 320)}</div></div>`);
+  if (cur.id === "141102_tip_over_443s") vid(base + "barstool_story.mp4", "Real · twin (old) · twin (retrained), photoreal via Omni");
+  $("steps").innerHTML = items.join("");
+}
+function poll(id, onDone, timerEl) {
+  const t0 = Date.now();
+  const tick = setInterval(() => timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(0) + " s", 250);
+  const loop = async () => {
+    const r = await j("/api/job/" + id);
+    if (r && r.status !== "running") { clearInterval(tick); timerEl.textContent = r.secs + " s"; onDone(r); } else setTimeout(loop, 1500);
+  };
+  loop();
+}
+$("go").onclick = async () => {
+  $("go").disabled = true;
+  $("live").innerHTML = '<h3>Argon · live</h3><div><span class="tag run">confirming</span><span class="tag run">diagnosing</span></div>';
+  const [c, d] = await Promise.all(["confirm", "diagnose"].map(k => fetch(`/api/run/${k}?arg=${encodeURIComponent(cur.clip)}`, { method: "POST" }).then(r => r.json())));
+  let out = { c: null, d: null };
+  const render = () => {
+    let h = "<h3>Argon · live</h3>";
+    if (out.c) h += out.c.error ? `<div class="tag bad">confirm error</div>` : `<div><span class="tag ${out.c.result.failure === "none" ? "ok" : "bad"}">${out.c.result.failure}</span> at ${out.c.result.t_sec}s · confidence ${out.c.result.confidence}</div><ul>${out.c.result.visual_evidence.slice(0, 3).map(e => `<li>${e}</li>`).join("")}</ul>`;
+    else h += '<div><span class="tag run">confirming…</span></div>';
+    if (out.d) h += out.d.error ? `<div class="tag bad">diagnose error</div>` : `<div style="margin-top:10px"><b>Cause:</b> ${out.d.result.cause}</div><ul><li>scene: ${out.d.result.scene.scenario_kind}</li><li>unknowns: ${out.d.result.unknowns.join("; ")}</li></ul>`;
+    else h += '<div style="margin-top:8px"><span class="tag run">diagnosing…</span></div>';
+    $("live").innerHTML = h;
+    if (out.c && out.d) $("go").disabled = false;
+  };
+  poll(c.id, r => { out.c = r; render(); }, $("timer"));
+  poll(d.id, r => { out.d = r; render(); }, document.createElement("span"));
+};
+$("gate").onclick = async () => {
+  $("gate").disabled = true;
+  $("gateout").innerHTML = '<div style="margin-top:10px"><span class="tag run">Argon reviewing updates…</span></div>';
+  const g = await fetch("/api/run/gate", { method: "POST" }).then(r => r.json());
+  poll(g.id, r => {
+    $("gate").disabled = false;
+    if (r.error) { $("gateout").innerHTML = `<div class="tag bad">${r.error}</div>`; return; }
+    $("gateout").innerHTML = `<div class="mute" style="margin:10px 0">${r.result.summary}</div>` + r.result.decisions.map(d =>
+      `<div class="dec"><span class="tag ${d.accept ? "ok" : "bad"}">${d.accept ? "accept" : "reject"}</span><b>${d.robot}</b> · ${d.reason}</div>`).join("");
+  }, $("gtimer"));
+};
+select();
+</script>
+</body>
+</html>

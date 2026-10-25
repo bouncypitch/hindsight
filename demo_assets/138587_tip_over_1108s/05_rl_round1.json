@@ -1,0 +1,201 @@
+{
+ "reward": "runs/reward_obstacle/reward_v1.py",
+ "before": {
+  "reward": -82.21764255440856,
+  "success_rate": 0.2,
+  "fall_rate": 0.0,
+  "stall_rate": 0.15,
+  "collision_rate": 0.65,
+  "mean_edge_speed": 0.247720185082218,
+  "mean_abs_edge_heading": 6.88461590155639,
+  "mean_peak_impact": 32.66925
+ },
+ "after": {
+  "reward": -5.914066834861545,
+  "success_rate": 0.475,
+  "fall_rate": 0.0,
+  "stall_rate": 0.0,
+  "collision_rate": 0.025,
+  "mean_edge_speed": 0.1950616868828133,
+  "mean_abs_edge_heading": 22.102103883230207,
+  "mean_peak_impact": 32.50575
+ },
+ "policy": {
+  "cruise_speed": 0.3387362730728499,
+  "slow_dist": 0.9674903722014258,
+  "slow_speed": 0.28539620298331947,
+  "descent_angle_deg": 14.486927111644473,
+  "heading_gain": 0.09078745734639473,
+  "align_tol_deg": 41.080633895648,
+  "yield_dist": 2.9636729141692544,
+  "avoid_dist": 3.9055667348427323,
+  "avoid_gain": 3.990581582577475
+ },
+ "history": [
+  {
+   "gen": 0,
+   "best_reward": -79.46955882960853,
+   "success_rate": 0.2,
+   "fall_rate": 0.0,
+   "stall_rate": 0.175,
+   "collision_rate": 0.625,
+   "mean_edge_speed": 0.3278154620694228,
+   "mean_abs_edge_heading": 6.857223453171622,
+   "mean_peak_impact": 32.68825
+  },
+  {
+   "gen": 1,
+   "best_reward": -79.29112864182184,
+   "success_rate": 0.2,
+   "fall_rate": 0.0,
+   "stall_rate": 0.175,
+   "collision_rate": 0.625,
+   "mean_edge_speed": 0.4583413344647823,
+   "mean_abs_edge_heading": 6.827987208511975,
+   "mean_peak_impact": 32.6995
+  },
+  {
+   "gen": 2,
+   "best_reward": -67.8239285982655,
+   "success_rate": 0.325,
+   "fall_rate": 0.0,
+   "stall_rate": 0.05,
+   "collision_rate": 0.625,
+   "mean_edge_speed": 0.3821051524249782,
+   "mean_abs_edge_heading": 8.824125670090758,
+   "mean_peak_impact": 32.69775
+  },
+  {
+   "gen": 3,
+   "best_reward": -56.66338251179492,
+   "success_rate": 0.35,
+   "fall_rate": 0.0,
+   "stall_rate": 0.15,
+   "collision_rate": 0.5,
+   "mean_edge_speed": 0.26192481091254577,
+   "mean_abs_edge_heading": 10.216568984333618,
+   "mean_peak_impact": 32.6795
+  },
+  {
+   "gen": 4,
+   "best_reward": -14.799210164176793,
+   "success_rate": 0.425,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.075,
+   "mean_edge_speed": 0.17582020866838458,
+   "mean_abs_edge_heading": 17.501555825005248,
+   "mean_peak_impact": 32.59275
+  },
+  {
+   "gen": 5,
+   "best_reward": -11.521504242221003,
+   "success_rate": 0.45,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.05,
+   "mean_edge_speed": 0.17394402534623477,
+   "mean_abs_edge_heading": 18.77657136050374,
+   "mean_peak_impact": 32.59875
+  },
+  {
+   "gen": 6,
+   "best_reward": -28.80712795143782,
+   "success_rate": 0.375,
+   "fall_rate": 0.0,
+   "stall_rate": 0.5,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.13212775498648655,
+   "mean_abs_edge_heading": 16.11238094478834,
+   "mean_peak_impact": 32.43025
+  },
+  {
+   "gen": 7,
+   "best_reward": -15.214324314921214,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.475,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.1467366349726941,
+   "mean_abs_edge_heading": 19.00962173152124,
+   "mean_peak_impact": 32.558749999999996
+  },
+  {
+   "gen": 8,
+   "best_reward": -16.613282057942076,
+   "success_rate": 0.4,
+   "fall_rate": 0.0,
+   "stall_rate": 0.075,
+   "collision_rate": 0.1,
+   "mean_edge_speed": 0.1939658745734514,
+   "mean_abs_edge_heading": 14.457174461839681,
+   "mean_peak_impact": 32.62975
+  },
+  {
+   "gen": 9,
+   "best_reward": -7.066365285464757,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.18533510188363103,
+   "mean_abs_edge_heading": 22.015300618023456,
+   "mean_peak_impact": 32.5705
+  },
+  {
+   "gen": 10,
+   "best_reward": -8.143813443225485,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.19004363891745782,
+   "mean_abs_edge_heading": 21.475024015654974,
+   "mean_peak_impact": 32.5645
+  },
+  {
+   "gen": 11,
+   "best_reward": -8.220148527371885,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.025,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.17352414375204017,
+   "mean_abs_edge_heading": 21.42281707439198,
+   "mean_peak_impact": 32.57725000000001
+  },
+  {
+   "gen": 12,
+   "best_reward": -5.914066834861545,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.1950616868828133,
+   "mean_abs_edge_heading": 22.102103883230207,
+   "mean_peak_impact": 32.50575
+  },
+  {
+   "gen": 13,
+   "best_reward": -15.607886530320803,
+   "success_rate": 0.475,
+   "fall_rate": 0.0,
+   "stall_rate": 0.475,
+   "collision_rate": 0.025,
+   "mean_edge_speed": 0.14825774955102583,
+   "mean_abs_edge_heading": 19.266328340343783,
+   "mean_peak_impact": 32.55650000000001
+  },
+  {
+   "gen": 14,
+   "best_reward": -10.419449676400879,
+   "success_rate": 0.45,
+   "fall_rate": 0.0,
+   "stall_rate": 0.0,
+   "collision_rate": 0.05,
+   "mean_edge_speed": 0.19059818729313416,
+   "mean_abs_edge_heading": 18.568834128626975,
+   "mean_peak_impact": 32.58475
+  }
+ ]
+}
