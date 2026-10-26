@@ -1,5 +1,5 @@
 # Federated Robot Learning - Enabled by Argon
-**Demo site:** https://bouncypitch.github.io/hindsight/ · **1-minute video:** https://youtu.be/ZgMhqIWLpNs
+**Demo site:** https://bouncypitch.github.io/hindsight/ · **All failures Argon found:** https://bouncypitch.github.io/hindsight/review/ · **1-minute video:** https://youtu.be/ZgMhqIWLpNs
 
 https://github.com/user-attachments/assets/f1342774-0385-4251-81a7-e0a83d48397b
 
@@ -100,4 +100,4 @@ uv run uvicorn app.live_server:app --port 8780            # live demo
 - **FrodoBots-Mini-4K** (CC-BY-SA-4.0) and **BitRobot/berkeley-frodobots-lerobot-7k** (Apache-2.0), via Hugging Face.
 - **Coco Robotics sample clips** from [VAIL-UCLA/MIMIC](https://github.com/VAIL-UCLA/MIMIC), used with credit and not redistributed here.
 - Physics: MuJoCo. Narration: ElevenLabs.
-- No dataset media is included in this repository.
+- The website includes short, downscaled FrodoBots-Mini-4K clips (CC-BY-SA-4.0), credited on each page. No Coco media is redistributed.
